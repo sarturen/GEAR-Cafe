@@ -18,6 +18,7 @@ Each topic may contain:
 | [Plugin Contract](./plugin-contract/conclusion.md) | Active | Resource types, operations, observations, validations |
 | [Failure & Evidence](./failure-evidence/conclusion.md) | Partial | Failure semantics, evidence collection, teardown boundary |
 | [Reporting](./reporting/conclusion.md) | Partial | Coverage disclosure and environment snapshot |
+| [Framework Runtime](./framework-runtime/conclusion.md) | Active | Runtime layering, Run lifecycle, preflight, results, and archival |
 
 ## Documentation rule
 
