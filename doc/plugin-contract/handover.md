@@ -72,8 +72,47 @@ This rule should be treated as hard unless reality later proves it impossible.
 
 ---
 
-## 5. Next Cafe posture
+## 5. GUI configuration ownership
 
-The next Plugin discussion should probably focus on contract shape and discovery only after DSL work is sufficiently settled.
+A later Framework/GUI Cafe asked how GUI should interact with low-level Plugins.
 
-Do not jump straight into GUI extension architecture merely because camera ROI editing will eventually need special UX.
+The accepted answer distinguishes Runtime from configuration:
+
+```text
+Test Runtime:
+GUI -> Framework -> Plugin Runtime -> hardware
+
+Environment configuration:
+GUI host -> Plugin GUI Editor -> Plugin-owned config payload
+```
+
+The user explicitly chose:
+
+> let every Plugin define its own configuration behavior and put that responsibility in the Plugin Contract.
+
+Therefore Framework should not build a universal device-configuration form system.
+
+Plugin owns:
+
+- configuration payload format;
+- configuration validation;
+- device discovery needed by its editor;
+- previews and interactive tools such as camera ROI selection;
+- the PySide6 configuration editor presented inside the GUI host.
+
+Framework/GUI owns:
+
+- the logical resource identity being configured;
+- editor hosting and Save/Cancel flow;
+- persistence of the returned serializable payload;
+- preventing configuration sessions during an Active Run.
+
+The GUI editor is loaded only by GUI. CLI execution and Framework Runtime use the Plugin Runtime surface and saved Environment data without importing the editor.
+
+---
+
+## 6. Next Cafe posture
+
+The next Plugin discussion may focus on manifest/discovery and the smallest editor factory/context contract.
+
+Do not reintroduce a universal configuration schema renderer unless repeated Plugin implementations prove it useful.

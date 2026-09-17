@@ -14,7 +14,8 @@ operations
 observations
 validations
 evidence/capture capabilities
-configuration schema
+configuration contract
+GUI configuration editor
 ```
 
 Not every Resource Type must look structurally identical.
@@ -193,7 +194,8 @@ Framework can then use that contract for:
 - static DSL validation;
 - preflight;
 - authoring context;
-- GUI/config integration later.
+- Environment config validation;
+- GUI configuration-editor discovery.
 
 ---
 
@@ -237,13 +239,110 @@ REPEAT
 
 ---
 
-## 10. Open questions for later
+## 10. Plugin owns Resource configuration
+
+The configuration of a Resource Type belongs to its Plugin.
+
+Framework Environment data owns only the outer binding identity:
+
+```text
+logical resource identity
+Resource Type
+Plugin identity
+Plugin configuration payload
+```
+
+Conceptually:
+
+```text
+SCREEN.center:
+    type: SCREEN
+    plugin: camera_plugin
+    config: <camera_plugin-owned data>
+```
+
+Framework stores and passes the `config` payload but does not interpret camera ids, ROI coordinates, COM settings, relay channels, ADB serials, or other Plugin-specific fields.
+
+The Plugin contract must provide configuration validation for its own payload. Static Preflight may invoke this validation, but it does not probe live hardware.
+
+Configuration output must be serializable so Environment Configuration can persist it and Run archival can copy it.
+
+---
+
+## 11. Plugin owns its GUI configuration editor
+
+Each Plugin defines how its resources are configured in GUI.
+
+Examples:
+
+```text
+ADB Plugin
+    -> serial discovery and selection
+
+CONSOLE Plugin
+    -> COM discovery, baudrate and serial settings
+
+RELAY Plugin
+    -> board/channel selection
+
+SCREEN/Camera Plugin
+    -> camera preview and ROI drawing
+```
+
+The GUI provides the host/container and Save/Cancel workflow. The Plugin provides the actual editor behavior and returns its serializable configuration payload.
+
+A Plugin may use shared GUI helper controls, but Framework does not generate or interpret a universal configuration form.
+
+The GUI editor may depend on PySide6. It is a separate GUI-facing entry point and is loaded only by the GUI. Runtime contract loading and CLI execution must not require importing the GUI editor.
+
+The editor may perform live configuration actions such as:
+
+```text
+device discovery
+connection trial
+camera preview
+ROI selection
+```
+
+These actions are configuration tools, not Runtime Preflight guarantees.
+
+The editor returns data; it does not contribute DSL grammar, execute Test Cases, or control an Active Run.
+
+Configuration sessions are not opened while a Run is active, preventing GUI configuration tools and Runtime from competing for hardware.
+
+---
+
+## 12. Runtime and GUI surfaces remain separate
+
+One Plugin package may contain both surfaces:
+
+```text
+Plugin Package
+├── Runtime Contract / implementation
+├── Configuration validation
+└── GUI configuration editor
+```
+
+This does not make Framework Runtime depend on GUI.
+
+The dependency direction is:
+
+```text
+GUI -> Plugin GUI Editor -> Plugin configuration data
+Framework Runtime -> Plugin Runtime Contract -> hardware
+```
+
+Both sides meet only through persisted Environment configuration data and the declared Plugin identity.
+
+---
+
+## 13. Open questions for later
 
 Not yet designed:
 
 - exact manifest/schema format;
 - versioning/compatibility rules;
 - Plugin discovery/registration;
-- config-schema integration;
-- optional custom GUI configuration editors;
+- exact GUI editor factory/context API;
+- shared GUI helper SDK, if repeated editor patterns justify one;
 - formal evidence/capture capability shape.

@@ -141,6 +141,7 @@ The following remain open and should be discussed only when needed:
 - exact minimal Control Host lock used across GUI and CLI processes;
 - resource instance creation/open/close lifecycle details;
 - Framework callback threading rules needed by PySide6;
+- the smallest GUI host/context API for Plugin-provided configuration editors;
 - Run archive retention and deletion policy;
 - how cleanup failure is represented without introducing a separate ERROR result;
 - the still-open zero-bound wildcard Observation outcome from Reporting.

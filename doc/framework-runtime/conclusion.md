@@ -110,6 +110,26 @@ The API does not expose Plugin instances or Executor internals.
 
 GUI updates use simple callbacks/listeners. A PySide6 adapter may translate callbacks into Qt signals. Do not introduce a general event bus or message broker.
 
+### Configuration GUI path
+
+Resource configuration is Plugin-owned and does not pass through the Test Executor.
+
+Conceptually:
+
+```text
+GUI host
+→ Plugin Registry discovers Plugin GUI Editor
+→ Plugin Editor performs device-specific configuration/preview
+→ Plugin Editor returns serializable config payload
+→ Environment Configuration stores that payload
+```
+
+Framework does not interpret Plugin-specific configuration fields.
+
+Plugin GUI Editors are loaded only by GUI. CLI execution and Framework Runtime do not import them.
+
+Configuration mode is unavailable while a Run is active so configuration tools and Runtime cannot compete for hardware.
+
 ---
 
 ## 6. Core component responsibilities
