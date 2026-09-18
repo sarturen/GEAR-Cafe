@@ -1,0 +1,12 @@
+api: gear.environment/v1
+name: USB bench
+plugins:
+  gear.adb:
+    config:
+      adb_path: adb
+devices: {}
+resources:
+  ADB.main:
+    type: ADB
+    plugin: gear.adb
+    config: {}

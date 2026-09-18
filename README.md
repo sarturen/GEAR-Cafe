@@ -1,6 +1,6 @@
 # GEAR Framework
 
-GEAR executes the [v1 contracts](doc/README.md) with one fixed worker and long-lived plugin sessions. The framework contains plugin discovery, strict YAML/DSL validation, configuration-only Preflight, execution, evidence, reporting, host exclusion and a GUI-neutral Workspace bridge.
+GEAR executes the [v1 contracts](doc/README.md) with one fixed worker and long-lived plugin sessions. The framework contains plugin discovery, strict YAML/DSL validation, configuration-only Preflight, execution, evidence, reporting, host exclusion and a GUI-neutral Workspace bridge. An optional Qt desktop now hosts the first [USB ADB plugin](plugins/adb/README.md).
 
 ## Install and run
 
@@ -41,6 +41,17 @@ All public FrameworkV1 data and protocol shapes come from the separate dependenc
 
 ## GUI integration
 
+Launch the included desktop and ADB Workspace from the repository root:
+
+```powershell
+.\.venv\Scripts\python -m pip install -e ".[gui]"
+.\.venv\Scripts\gear gui --app-dir . --environment examples/adb/environment.yaml --project examples/adb/project.yaml --case examples/adb/case.yaml
+```
+
+The example starts with an unassigned `ADB.main`. Configure the ADB executable, register a USB serial and save its resource binding in the Workspace. Case/project arguments are optional; they can also be selected in the desktop.
+The desktop presents Preflight before enabling confirmation, shows diagnostics and report paths, and waits cooperatively for in-flight work when closing.
+See the [current ADB scope and pending decisions](docs/adb-status.md) and [desktop preview](docs/images/adb-workspace.png).
+
 A GUI shell supplies a dispatcher that posts a zero-argument callback to its GUI thread.
 Create contexts and Workspaces on that thread:
 
@@ -59,8 +70,8 @@ The saved Environment is JSON-formatted YAML 1.2 after edits; comments/formattin
 A shell reads `framework.session_diagnostics` after environment notifications to display asynchronous configuration failures. Such failures block the session until restart.
 Status and passive preview may remain visible during ACTIVE; manual commands and configuration edits are disabled and rejected by the host.
 
-PySide6 is required only when a GUI actually loads a Workspace. It is not a Framework dependency.
-This repository does not implement the full GUI shell or physical COM/camera/relay plugins.
+PySide6 is required only for the desktop/Workspace path, through the optional `gui` extra. Core execution and `gear run` remain independent of Qt.
+Physical COM/camera/relay plugins are not implemented.
 
 ## Plugin development
 
@@ -76,4 +87,5 @@ No cross-plugin calls, automatic reconnection or queued Runs are provided.
 ```
 
 Tests use deterministic clocks for timing semantics, blocking fake calls for cancellation/exclusivity, failure injection for finalization, a real separate process for OS exclusion, and subprocess CLI runs.
+ADB tests substitute real child processes for the physical ADB executable, while GUI tests use actual Qt widgets.
 Real device conformance remains the responsibility of each plugin's hardware tests.

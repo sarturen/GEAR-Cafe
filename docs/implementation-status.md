@@ -41,8 +41,9 @@
 
 ## 边界
 
-真实 COM、摄像头、继电器等驱动和完整 GUI Shell 未在此任务实现。
-Workspace 桥通过队列派发测试；未声称完成真实 Qt 窗口交互测试。
+本记录对应 Framework v1 基线；后续 GUI Shell 和 ADB 插件进度见 [ADB 实现记录](adb-status.md)。
+真实 COM、摄像头、继电器等驱动仍未实现。
+Framework v1 基线的 Workspace 桥通过队列派发测试，后续真实 Qt 控件验证单独记录。
 Unix 锁回退已实现，本轮执行证据来自 Windows。
 Framework 以插件遵守合约为前提，不隔离恶意插件，也不强杀不返回的驱动调用。
 

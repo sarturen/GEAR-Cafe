@@ -1,0 +1,30 @@
+api: gear.plugin/v1
+id: gear.adb
+version: 1.0.0
+entrypoints:
+  runtime: gear_adb.runtime:create_plugin
+  workspace: gear_adb.workspace:create_workspace
+resource_types:
+  ADB:
+    operations:
+      SHELL:
+        args_schema:
+          type: object
+          properties:
+            command:
+              type: string
+              minLength: 1
+              pattern: '\S'
+          required: [command]
+          additionalProperties: false
+      PULL:
+        args_schema:
+          type: object
+          properties:
+            remote_path:
+              type: string
+              pattern: '^/'
+          required: [remote_path]
+          additionalProperties: false
+    conditions: {}
+    evidence: {}

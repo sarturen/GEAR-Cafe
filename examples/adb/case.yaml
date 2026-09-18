@@ -1,0 +1,9 @@
+api: gear.dsl/v1
+name: adb_usb_smoke
+description: Read a device property through the configured USB resource.
+body:
+  - do:
+      resource: ADB.main
+      operation: SHELL
+      args:
+        command: getprop ro.product.model

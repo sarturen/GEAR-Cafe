@@ -16,12 +16,14 @@ USB only. Preflight checks configuration only. Full Run exclusivity. No automati
 
 ## Tasks
 
-- [ ] Transport: create plugins/adb/gear_adb/transport.py and tests/test_adb_transport.py. Test USB discovery, explicit targets, shell output/exit, pull, persistent logcat and joined shutdown with a fake executable. Run the focused tests red before implementation and green afterwards.
-- [ ] Configuration and runtime: create config.py, runtime.py and gear-plugin.yaml. Test pure static validation, Run resource mapping, command results, service lifetime and run-local pulled files. Finish AVAILABLE / UNAVAILABLE and evidence after user decisions arrive.
-- [ ] Workspace: create workspace.py and tests/test_adb_workspace.py. Use real offscreen widgets; check complete slice commits, manual operation submission, ACTIVE control disabling, persistence of missing identities, log display and dispose behavior.
-- [ ] GUI host: add desktop.py, gear gui CLI and optional GUI dependency. Test plugin discovery/hosting, GUI-thread dispatch, run confirmation and cooperative close.
-- [ ] Integrate: add example environment/project/case and plugin README; verify real Registry/Framework with fake transport and two Runs, no Qt import for runtime, full pytest, packaging and screenshot.
-- [ ] Record results and limitations; commit the verified feature branch.
+- [x] Transport: create plugins/adb/gear_adb/transport.py and tests/test_adb_transport.py. Test USB discovery, explicit targets, shell output/exit, pull, persistent logcat and joined shutdown with a fake executable. Run the focused tests red before implementation and green afterwards.
+- [x] Base configuration and runtime: config.py, runtime.py and gear-plugin.yaml implement static validation, Run resource mapping, command results, session lifetime and run-local pulled files.
+- [ ] Pending user decisions: implement AVAILABLE / UNAVAILABLE and DIAGNOSTIC_LOGS semantics after the user answers the existing confirmation question.
+- [x] Workspace: create workspace.py and tests/test_adb_workspace.py. Use real offscreen widgets; check complete slice commits, manual operation submission, ACTIVE control disabling, persistence of missing identities, log display and dispose behavior.
+- [x] GUI host: add desktop.py, gear gui CLI and optional GUI dependency. Test plugin discovery/hosting, GUI-thread dispatch, run confirmation and cooperative close.
+- [x] Integrate: add example environment/project/case and plugin README; verify real Registry/Framework with fake transport and two Runs, no Qt import for runtime, full pytest, packaging and screenshot.
+- [x] Record current results and limitations in docs/adb-status.md; current subset has 106 passing tests and a verified wheel/GUI preview.
+- [ ] Complete the remaining approved capabilities after semantic decisions, then record final acceptance.
 
 ## Internal interfaces
 
