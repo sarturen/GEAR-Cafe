@@ -41,14 +41,21 @@ All public FrameworkV1 data and protocol shapes come from the separate dependenc
 
 ## GUI integration
 
-Launch the included desktop and ADB Workspace from the repository root:
+On Windows, install GUI dependencies once, then double-click **[Start-GEAR.cmd](Start-GEAR.cmd)** in the repository root:
 
 ```powershell
 .\.venv\Scripts\python -m pip install -e ".[gui]"
+```
+
+Choose an Environment file in the opening dialog (for ADB, start with `examples/adb/environment.yaml`). The unified desktop loads the installed plugin Workspaces; select the project and case in the main window. Cancel the opening dialog to exit without starting a session. The launcher uses this folder's `.venv` regardless of the current working directory and keeps errors visible in its console.
+
+You can also launch directly with known files:
+
+```powershell
 .\.venv\Scripts\gear gui --app-dir . --environment examples/adb/environment.yaml --project examples/adb/project.yaml --case examples/adb/case.yaml
 ```
 
-The example starts with an unassigned `ADB.main`. Configure the ADB executable, register a USB serial and save its resource binding in the Workspace. Case/project arguments are optional; they can also be selected in the desktop.
+The example starts with an unassigned `ADB.main`. Configure the ADB executable, register a USB serial and save its resource binding in the Workspace. Environment/case/project arguments are optional; omitting `--environment` opens the same startup dialog.
 The desktop presents Preflight before enabling confirmation, shows diagnostics and report paths, and waits cooperatively for in-flight work when closing.
 See the [ADB implementation and decision record](docs/adb-status.md), [desktop preview](docs/images/adb-workspace.png), and [failure evidence configuration](docs/images/adb-evidence.png).
 

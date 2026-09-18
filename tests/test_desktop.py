@@ -245,24 +245,48 @@ def test_blocked_finalization_is_visible_and_can_close(desktop, qapp):
     wait_gui(qapp, lambda: host._closed)
 
 
-def test_gui_command_launches_without_required_case_or_project(bench, qapp):
+@pytest.mark.parametrize("choose_environment", [False, True])
+def test_gui_command_launches_without_required_case_or_project(
+    bench, qapp, monkeypatch, choose_environment
+):
     from gear_framework.cli import main
-    from gear_framework.desktop import DesktopWindow
+    from gear_framework.desktop import DesktopWindow, QFileDialog
 
     closed = []
+
+    def choose(*args, **kwargs):
+        assert choose_environment, "Explicit environment must skip the file picker"
+        return str(bench["environment"]), ""
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", choose)
 
     def close_window():
         for widget in qapp.topLevelWidgets():
             if isinstance(widget, DesktopWindow) and widget.isVisible():
-                closed.append(True)
+                closed.append(widget.framework.environment_path)
                 widget.close()
 
+    args = ["gui", "--app-dir", str(bench["app"])]
+    if not choose_environment:
+        args.extend(["--environment", str(bench["environment"])])
     QTimer.singleShot(30, close_window)
-    assert main([
-        "gui", "--app-dir", str(bench["app"]),
-        "--environment", str(bench["environment"]),
-    ]) == 0
-    assert closed
+    assert main(args) == 0
+    assert closed == [bench["environment"].resolve()]
+
+
+def test_gui_cancel_environment_selection_does_not_start_framework(
+    bench, qapp, monkeypatch
+):
+    from gear_framework.cli import main
+    from gear_framework import desktop
+
+    monkeypatch.setattr(desktop.QFileDialog, "getOpenFileName", lambda *args: ("", ""))
+
+    def unexpected_framework(*args, **kwargs):
+        pytest.fail("Cancelling environment selection must not create a Framework")
+
+    monkeypatch.setattr(desktop, "Framework", unexpected_framework)
+    assert main(["gui", "--app-dir", str(bench["app"])]) == 0
 
 
 def test_cli_run_remains_headless_and_gui_explains_optional_dependency(bench):

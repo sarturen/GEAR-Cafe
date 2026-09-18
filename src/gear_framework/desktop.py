@@ -283,8 +283,18 @@ class DesktopWindow(QMainWindow):
         self.close()
 
 
-def run_gui(app_dir, environment, *, case=None, project=None):
+def run_gui(app_dir, environment=None, *, case=None, project=None):
     app = QApplication.instance() or QApplication(sys.argv[:1])
+    if environment is None:
+        selected, _ = QFileDialog.getOpenFileName(
+            None,
+            "GEAR · 选择环境配置",
+            str(Path(app_dir).resolve()),
+            "YAML / JSON (*.yaml *.yml *.json);;所有文件 (*)",
+        )
+        if not selected:
+            return 0
+        environment = Path(selected)
     framework = Framework(app_dir, environment)
     try:
         window = DesktopWindow(framework, case=case, project=project)

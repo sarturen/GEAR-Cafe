@@ -20,8 +20,10 @@ def main(argv=None):
     for flag in ("app-dir", "case", "project", "environment"):
         run.add_argument("--" + flag, required=True, type=Path)
     gui = commands.add_parser("gui", help="Open the optional Qt Workspace desktop")
-    for flag in ("app-dir", "environment"):
-        gui.add_argument("--" + flag, required=True, type=Path)
+    gui.add_argument("--app-dir", required=True, type=Path)
+    gui.add_argument(
+        "--environment", type=Path, help="Environment file; omit to choose in the GUI"
+    )
     for flag in ("case", "project"):
         gui.add_argument("--" + flag, type=Path)
     args = parser.parse_args(argv)
