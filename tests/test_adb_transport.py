@@ -39,6 +39,10 @@ elif args[:3] == ["-t", "11", "pull"]:
     pathlib.Path(args[-1], "copied.txt").write_text("pulled café", encoding="utf-8")
     print("1 file pulled")
     sys.exit(cfg.get("pull_exit", 0))
+elif args == ["-t", "11", "logcat", "-d", "-v", "threadtime"]:
+    print("current log buffer café", flush=True)
+    print("dump warning", file=sys.stderr, flush=True)
+    sys.exit(cfg.get("dump_exit", 0))
 elif args[:3] == ["-t", "11", "logcat"]:
     for i in range(cfg.get("log_lines", 3)):
         print(f"log café {i}", flush=True)
@@ -277,6 +281,17 @@ def test_pull_keeps_remote_path_as_one_argument_and_writes_supplied_folder(
         "/sdcard/a b;echo bad",
         str(tmp_path),
     ]
+
+
+def test_dump_logcat_uses_finite_dump_without_clearing_logs(fake_adb):
+    fake_adb[0](dump_exit=3)
+    assert service().dump_logcat("phone") == {
+        "exit_code": 3,
+        "stdout": "current log buffer café\n",
+        "stderr": "dump warning\n",
+    }
+    assert fake_adb[1]()[-1] == ["-t", "11", "logcat", "-d", "-v", "threadtime"]
+    assert all(proc.poll() is not None for proc in fake_adb[2])
 
 
 def test_logcat_streams_file_and_bounded_tail_until_stop(fake_adb, tmp_path):

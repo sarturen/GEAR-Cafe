@@ -241,6 +241,9 @@ class AdbService:
     def pull(self, serial: str, remote_path: str, destination: str) -> dict:
         return self._run([*self._target(serial), "pull", remote_path, destination])
 
+    def dump_logcat(self, serial: str) -> dict:
+        return self._run([*self._target(serial), "logcat", "-d", "-v", "threadtime"])
+
     def start_logcat(self, serial: str, destination: str) -> dict:
         self._ensure_open()
         with self._lock:

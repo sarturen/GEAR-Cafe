@@ -46,11 +46,22 @@ def validate_slice(plugin_slice):
                 "devices." + serial,
             )
     for rid, record in plugin_slice["resources"].items():
-        if record["config"]:
+        resource_config = record["config"]
+        if set(resource_config) - {"log_paths"}:
             issue(
                 "ADB_CONFIG_INVALID",
-                "ADB 资源配置当前应为空。",
+                "ADB 资源配置仅支持 log_paths。",
                 f"resources.{rid}.config",
+            )
+        paths = resource_config.get("log_paths", [])
+        if type(paths) is not list or any(
+            type(path) is not str or not path.startswith("/") or "\0" in path
+            for path in paths
+        ):
+            issue(
+                "ADB_LOG_PATHS_INVALID",
+                "附加日志路径必须是设备绝对路径字符串列表，且不含空字符。",
+                f"resources.{rid}.config.log_paths",
             )
         serial = record.get("device")
         if not serial:

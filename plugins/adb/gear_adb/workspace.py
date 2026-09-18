@@ -73,6 +73,7 @@ class AdbWorkspace:
         self._build_shell()
         self._build_pull()
         self._build_logcat()
+        self._build_evidence()
 
         self.status_label = QLabel("配置编辑后即时保存；设备状态以最近一次刷新为准。")
         self.status_label.setObjectName("status_label")
@@ -283,6 +284,76 @@ class AdbWorkspace:
         self.log_output = self._output("log_output")
         layout.addWidget(self.log_output, 1)
 
+    def _build_evidence(self):
+        layout = self._tab("失败取证")
+        hint = QLabel(
+            "用例启用日志取证（DIAGNOSTIC_LOGS）后，会采集设备当前的 logcat，不会清空设备日志。"
+            "可为每个逻辑资源额外配置设备上的文件或目录；留空时仅采集 logcat。"
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+        row = QHBoxLayout()
+        row.addWidget(QLabel("逻辑资源"))
+        self.evidence_resource = QComboBox()
+        self.evidence_resource.setObjectName("evidence_resource")
+        self.evidence_resource.currentIndexChanged.connect(
+            lambda _: self._load_evidence_paths()
+        )
+        row.addWidget(self.evidence_resource, 1)
+        layout.addLayout(row)
+        layout.addWidget(QLabel("额外设备路径（每行一条，以 / 开头的绝对路径）"))
+        self.evidence_paths = self._control(QPlainTextEdit(), "evidence_paths")
+        self.evidence_paths.setPlaceholderText(
+            "/sdcard/Android/data/com.example.app/files/logs\n/data/local/tmp/report.txt"
+        )
+        layout.addWidget(self.evidence_paths, 1)
+        self.evidence_save_button = self._button(
+            "保存取证路径", "evidence_save_button", self._save_evidence_paths
+        )
+        layout.addWidget(
+            self.evidence_save_button, alignment=Qt.AlignmentFlag.AlignLeft
+        )
+
+    def _load_evidence_paths(self, data=None):
+        if self._disposed:
+            return
+        if data is None:
+            try:
+                data = self.context.current_slice()
+            except GearError as exc:
+                self._show_error(exc)
+                return
+        record = data["resources"].get(self.evidence_resource.currentText())
+        paths = record["config"].get("log_paths", []) if record else []
+        text = (
+            "\n".join(str(path) for path in paths)
+            if isinstance(paths, list)
+            else str(paths)
+        )
+        self.evidence_paths.setPlainText(text)
+        self._update_controls()
+
+    def _save_evidence_paths(self):
+        resource_id = self.evidence_resource.currentText()
+        if not resource_id:
+            return
+        paths = [
+            line.strip()
+            for line in self.evidence_paths.toPlainText().splitlines()
+            if line.strip()
+        ]
+
+        def edit(data):
+            record = data["resources"].get(resource_id)
+            if record is None:
+                raise GearError("ADB_RESOURCE_UNKNOWN", "资源已不存在：" + resource_id)
+            if paths:
+                record["config"]["log_paths"] = paths
+            else:
+                record["config"].pop("log_paths", None)
+
+        self._commit(edit)
+
     def _show_error(self, error):
         self.status_label.setText(" · ".join(str(part) for part in error.args))
 
@@ -294,6 +365,10 @@ class AdbWorkspace:
         for control in self._controls:
             control.setEnabled(enabled)
         self.target_device.setEnabled(not self._disposed)
+        self.evidence_resource.setEnabled(not self._disposed)
+        evidence_enabled = enabled and bool(self.evidence_resource.currentText())
+        self.evidence_paths.setEnabled(evidence_enabled)
+        self.evidence_save_button.setEnabled(evidence_enabled)
         self.run_label.setText(
             "运行中 · 操作已锁定"
             if self._active
@@ -354,6 +429,8 @@ class AdbWorkspace:
             self.binding_device.setCurrentText(
                 data["resources"][selected].get("device", "")
             )
+        self._set_options(self.evidence_resource, sorted(data["resources"]))
+        self._load_evidence_paths(data)
         self._update_log()
         report = validate_slice(data)
         if report["diagnostics"]:
@@ -471,6 +548,7 @@ class AdbWorkspace:
             return
         resource_id = "ADB." + alias
         selected = self._selected_binding
+        evidence_selected = self.evidence_resource.currentText()
 
         def edit(data):
             resources = data["resources"]
@@ -482,6 +560,8 @@ class AdbWorkspace:
 
         if self._commit(edit):
             self._selected_binding = resource_id
+            if evidence_selected == selected:
+                self.evidence_resource.setCurrentText(resource_id)
             self._reload()
 
     def _remove_binding(self):

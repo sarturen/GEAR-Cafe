@@ -50,7 +50,7 @@ Launch the included desktop and ADB Workspace from the repository root:
 
 The example starts with an unassigned `ADB.main`. Configure the ADB executable, register a USB serial and save its resource binding in the Workspace. Case/project arguments are optional; they can also be selected in the desktop.
 The desktop presents Preflight before enabling confirmation, shows diagnostics and report paths, and waits cooperatively for in-flight work when closing.
-See the [current ADB scope and pending decisions](docs/adb-status.md) and [desktop preview](docs/images/adb-workspace.png).
+See the [ADB implementation and decision record](docs/adb-status.md), [desktop preview](docs/images/adb-workspace.png), and [failure evidence configuration](docs/images/adb-evidence.png).
 
 A GUI shell supplies a dispatcher that posts a zero-argument callback to its GUI thread.
 Create contexts and Workspaces on that thread:

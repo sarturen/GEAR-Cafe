@@ -7,6 +7,7 @@ import uuid
 from gear_contracts.api import GearError
 from .config import PLUGIN_ID, diagnostic, validate_slice
 from .transport import AdbService
+from .evidence import collect_logs
 
 
 class AdbRuntime:
@@ -126,12 +127,39 @@ class AdbRuntime:
         }
 
     def evaluate(self, resource_id, condition, args, context):
-        self._resource(resource_id, context)
-        raise GearError("ADB_UNKNOWN_CAPABILITY", condition)
+        serial = self._resource(resource_id, context)
+        if condition not in ("AVAILABLE", "UNAVAILABLE"):
+            raise GearError("ADB_UNKNOWN_CAPABILITY", condition)
+        try:
+            matches = [
+                device
+                for device in self.service.discover()
+                if device["serial"] == serial
+            ]
+            if len(matches) > 1:
+                raise GearError("ADB_AMBIGUOUS_DEVICE", "多个 USB 设备使用相同序列号。")
+        except GearError as exc:
+            return {
+                "ok": False,
+                "satisfied": False,
+                "diagnostic": diagnostic(exc.args[0], str(exc)),
+                "details": {"serial": serial},
+            }
+        state = matches[0]["state"] if matches else "missing"
+        available = state == "device"
+        return {
+            "ok": True,
+            "satisfied": available if condition == "AVAILABLE" else not available,
+            "diagnostic": None,
+            "details": {"serial": serial, "state": state},
+        }
 
     def collect(self, resource_id, evidence, args, context):
-        self._resource(resource_id, context)
-        raise GearError("ADB_UNKNOWN_CAPABILITY", evidence)
+        serial = self._resource(resource_id, context)
+        if evidence != "DIAGNOSTIC_LOGS":
+            raise GearError("ADB_UNKNOWN_CAPABILITY", evidence)
+        config = self._binding["plugin_slice"]["resources"][resource_id]["config"]
+        return collect_logs(self.service, serial, config.get("log_paths", []), context)
 
     def end_run(self):
         self._binding = None

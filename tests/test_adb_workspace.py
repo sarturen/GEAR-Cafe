@@ -407,3 +407,129 @@ def test_run_allows_switching_passive_log_view_without_manual_commands(gui):
     workspace.target_device.setCurrentText("second-phone")
     assert not workspace.log_start_button.isEnabled()
     assert runtime.calls == []
+
+
+def test_evidence_paths_roundtrip_for_each_resource_preserves_complete_slice(gui):
+    _, workspace, context, runtime = gui
+    context.data["resources"]["ADB.main"]["config"] = {
+        "log_paths": ["/sdcard/main.log"]
+    }
+    context.data["resources"]["ADB.spare"]["config"] = {
+        "log_paths": ["/data/local/tmp/spare"]
+    }
+    context.environment_sub.listener()
+    before = context.current_slice()
+    assert "失败取证" in [
+        workspace.tabs.tabText(index) for index in range(workspace.tabs.count())
+    ]
+    workspace.evidence_resource.setCurrentText("ADB.main")
+    assert workspace.evidence_paths.toPlainText() == "/sdcard/main.log"
+    workspace.evidence_paths.setPlainText(
+        " /sdcard/app/logs \n\n/data/local/tmp/error.txt\n"
+    )
+    workspace.evidence_save_button.click()
+    expected = deepcopy(before)
+    expected["resources"]["ADB.main"]["config"]["log_paths"] = [
+        "/sdcard/app/logs",
+        "/data/local/tmp/error.txt",
+    ]
+    assert context.current_slice() == expected
+    assert context.commits[-1][1]["status"] == "VALID"
+    workspace.evidence_resource.setCurrentText("ADB.spare")
+    assert workspace.evidence_paths.toPlainText() == "/data/local/tmp/spare"
+    workspace.evidence_paths.clear()
+    workspace.evidence_save_button.click()
+    assert context.data["resources"]["ADB.spare"]["config"].get("log_paths", []) == []
+    workspace.evidence_resource.setCurrentText("ADB.main")
+    assert workspace.evidence_paths.toPlainText() == (
+        "/sdcard/app/logs\n/data/local/tmp/error.txt"
+    )
+    assert runtime.calls == []
+    assert context.pending == []
+
+
+def test_evidence_selection_is_passive_while_active_or_manual_busy(gui):
+    _, workspace, context, runtime = gui
+    context.data["resources"]["ADB.spare"]["config"]["log_paths"] = ["/sdcard/spare"]
+    context.environment_sub.listener()
+    before = context.current_slice()
+    context.set_state("ACTIVE")
+    assert workspace.evidence_resource.isEnabled()
+    assert not workspace.evidence_paths.isEnabled()
+    assert not workspace.evidence_save_button.isEnabled()
+    workspace.evidence_resource.setCurrentText("ADB.spare")
+    assert workspace.evidence_paths.toPlainText() == "/sdcard/spare"
+    workspace.evidence_paths.setPlainText("/sdcard/must-not-save")
+    workspace.evidence_save_button.click()
+    assert context.current_slice() == before
+    assert runtime.calls == []
+    context.set_state("IDLE")
+    assert workspace.evidence_paths.isEnabled()
+    assert workspace.evidence_save_button.isEnabled()
+    workspace.refresh_button.click()
+    assert workspace.evidence_resource.isEnabled()
+    assert not workspace.evidence_paths.isEnabled()
+    assert not workspace.evidence_save_button.isEnabled()
+    context.complete()
+    assert workspace.evidence_paths.isEnabled()
+    assert workspace.evidence_save_button.isEnabled()
+
+
+@pytest.mark.parametrize("saved", [123, None, "/sdcard/string", ["/sdcard/good", 123]])
+def test_invalid_saved_evidence_paths_remain_visible_and_editable(gui, saved):
+    _, workspace, context, runtime = gui
+    context.data["resources"]["ADB.main"]["config"]["log_paths"] = saved
+    context.environment_sub.listener()
+    workspace.evidence_resource.setCurrentText("ADB.main")
+    assert workspace.evidence_paths.toPlainText()
+    assert "配置需修正" in workspace.status_label.text()
+    workspace.evidence_paths.setPlainText("/sdcard/fixed")
+    workspace.evidence_save_button.click()
+    assert context.data["resources"]["ADB.main"]["config"]["log_paths"] == [
+        "/sdcard/fixed"
+    ]
+    assert context.commits[-1][1]["status"] == "VALID"
+    assert runtime.calls == []
+
+
+def test_evidence_edit_keeps_unknown_config_fields_for_explicit_repair(gui):
+    _, workspace, context, _ = gui
+    context.data["resources"]["ADB.main"]["config"] = {
+        "log_paths": ["/sdcard/old"],
+        "unknown": {"keep": True},
+    }
+    context.environment_sub.listener()
+    workspace.evidence_paths.setPlainText("relative/path")
+    workspace.evidence_save_button.click()
+    assert context.data["resources"]["ADB.main"]["config"] == {
+        "log_paths": ["relative/path"],
+        "unknown": {"keep": True},
+    }
+    assert context.commits[-1][1]["status"] == "INVALID"
+
+
+def test_evidence_selection_reloads_after_environment_binding_rename_and_removal(gui):
+    _, workspace, context, _ = gui
+    context.data["resources"]["ADB.spare"]["config"]["log_paths"] = ["/sdcard/spare"]
+    context.environment_sub.listener()
+    workspace.evidence_resource.setCurrentText("ADB.spare")
+    context.data["resources"]["ADB.spare"]["config"]["log_paths"] = ["/sdcard/external"]
+    context.environment_sub.listener()
+    assert workspace.evidence_resource.currentText() == "ADB.spare"
+    assert workspace.evidence_paths.toPlainText() == "/sdcard/external"
+    workspace.binding_table.selectRow(1)
+    workspace.binding_alias.setText("renamed")
+    workspace.binding_save_button.click()
+    assert workspace.evidence_resource.currentText() == "ADB.renamed"
+    assert workspace.evidence_paths.toPlainText() == "/sdcard/external"
+    workspace.binding_remove_button.click()
+    assert workspace.evidence_resource.currentText() == "ADB.main"
+    assert workspace.evidence_paths.toPlainText() == ""
+    workspace.evidence_save_button.click()
+    assert context.data["resources"]["ADB.main"]["config"].get("log_paths", []) == []
+    context.data["resources"] = {}
+    context.environment_sub.listener()
+    assert workspace.evidence_resource.count() == 0
+    assert workspace.evidence_paths.toPlainText() == ""
+    assert not workspace.evidence_paths.isEnabled()
+    assert not workspace.evidence_save_button.isEnabled()

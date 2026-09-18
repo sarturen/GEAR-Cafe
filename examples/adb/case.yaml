@@ -2,8 +2,17 @@ api: gear.dsl/v1
 name: adb_usb_smoke
 description: Read a device property through the configured USB resource.
 body:
+  - assert:
+      all:
+        - resource: ADB.main
+          condition: AVAILABLE
+      within: 5s
+      every: 200ms
   - do:
       resource: ADB.main
       operation: SHELL
       args:
         command: getprop ro.product.model
+evidence_on_fail:
+  - resource: ADB.main
+    evidence: DIAGNOSTIC_LOGS

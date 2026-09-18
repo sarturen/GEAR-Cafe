@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from gear_contracts.api import GearError
+from gear_framework.common import StopToken
 
 
 @pytest.fixture
@@ -86,6 +87,15 @@ class Device:
         self.exit_code = 0
         self.closed = False
         self.running = False
+        self.devices = [
+            {
+                "serial": "USB123",
+                "state": "device",
+                "transport_id": "11",
+                "usb": "",
+                "model": "",
+            }
+        ]
 
     def configure(self, path):
         self.calls.append(("configure", path))
@@ -97,6 +107,14 @@ class Device:
             "stdout": "设备\n",
             "stderr": "reason" if self.exit_code else "",
         }
+
+    def discover(self):
+        self.calls.append(("discover",))
+        return copy.deepcopy(self.devices)
+
+    def dump_logcat(self, serial):
+        self.calls.append(("dump_logcat", serial))
+        return {"exit_code": 0, "stdout": "current device log\n", "stderr": ""}
 
     def pull(self, serial, remote, destination):
         self.calls.append(("pull", serial, remote))
@@ -121,7 +139,12 @@ class Device:
 
 
 def context(tmp_path, run_id="r1", call_id="c1"):
-    return SimpleNamespace(run_id=run_id, call_id=call_id, artifact_dir=str(tmp_path))
+    return SimpleNamespace(
+        run_id=run_id,
+        call_id=call_id,
+        artifact_dir=str(tmp_path),
+        stop_token=StopToken(),
+    )
 
 
 def test_configure_accepts_unfinished_data_without_opening_device(

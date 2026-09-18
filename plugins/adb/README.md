@@ -63,7 +63,42 @@ PULL 接受设备绝对路径，可拉取文件或目录。用例自动写入 `r
 
 持续 logcat 在 GUI 显式选择新文件并启动，边采集边保存，界面显示尾部缓存。已有文件不覆盖。Run 期间可以继续查看已启动日志，手动命令和配置编辑被禁用。Stop 遵循 GEAR 合约，等待已进入调用返回；不要用 SHELL 启动需要人工输入、无限输出或脱离会话的后台任务，持续日志使用专用 logcat 控件。
 
-AVAILABLE / UNAVAILABLE 与失败取证正在等待用户确定具体语义，尚未列入本次中间版本的 manifest；不应将此中间状态视为完整插件验收。
+## 可用性与失败取证
+
+AVAILABLE 表示绑定的 USB 设备处于 device 状态；UNAVAILABLE 表示设备缺失或处于其他状态（包括 offline / unauthorized）。两者都不执行额外 Shell，也不判断 Android 是否启动完成。ADB 程序、server 查询故障或重复 USB 序列号无法唯一定位时返回调用错误，不把工具故障当成“设备不可用”。断言的轮询与时间窗口由 Framework 按 DSL 执行。
+
+DIAGNOSTIC_LOGS 在用例失败后保存当前 logcat，不清空设备日志。可以在“失败取证”页选择逻辑资源，每行填写一个附加设备文件/目录的绝对路径并保存；路径写入该资源的 config.log_paths。留空时只取 logcat。取证能力需要在用例的 evidence_on_fail 中声明：
+
+```yaml
+api: gear.dsl/v1
+name: adb_diagnostic_example
+body:
+  - assert:
+      all:
+        - resource: ADB.main
+          condition: AVAILABLE
+      within: 5s
+      every: 200ms
+evidence_on_fail:
+  - resource: ADB.main
+    evidence: DIAGNOSTIC_LOGS
+```
+
+Environment 中对应的可选配置：
+
+```yaml
+resources:
+  ADB.main:
+    type: ADB
+    plugin: gear.adb
+    device: USB_SERIAL
+    config:
+      log_paths:
+        - /sdcard/Download/device.log
+        - /data/local/tmp/logs
+```
+
+每次取证写入 Run 下独立的 evidence/gear.adb/<唯一目录>，logcat 为 UTF-8 文本，附加文件保持原内容。报告中的 Artifact 是相对 Run 根目录的文件路径。某一项失败时继续尽力采集其他项，保留已取得文件并单独记录错误，不改变用例原始失败；如果设备已断开，当前设备日志无法读取会如实报错。手动启动的持续 logcat 文件仍保留在其指定位置。Stop 等待当前调用返回后跳过尚未开始的采集。
 
 ## 验证与依赖
 

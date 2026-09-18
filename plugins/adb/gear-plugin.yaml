@@ -26,5 +26,8 @@ resource_types:
               pattern: '^/'
           required: [remote_path]
           additionalProperties: false
-    conditions: {}
-    evidence: {}
+    conditions:
+      AVAILABLE: {}
+      UNAVAILABLE: {}
+    evidence:
+      DIAGNOSTIC_LOGS: {}
