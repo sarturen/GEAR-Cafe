@@ -14,7 +14,7 @@
 - 中文 PySide6 Workspace，完整配置切片落盘；ACTIVE 时锁定修改和手动操作，仍可切换设备查看缓存日志。
 - “失败取证”页面按逻辑资源编辑 log_paths，支持读取和修正无效配置；资源重命名/删除后同步选择。
 - 通用 gear gui 宿主：插件工作区、文件选择、预检、确认、停止、诊断、报告及异步等待在途工作后关闭。
-- Windows 双击入口 Start-GEAR.cmd：选择环境配置后进入同一主窗口，自动装载插件工作区。
+- Windows 双击入口 Start-GEAR.cmd：默认读取唯一 environment.yaml 并进入常驻首页，插件工作区作为附加标签页。
 - 示例环境、项目、用例和插件使用说明。示例 ADB.main 默认未绑定，须在页面补全。
 
 插件生产代码只引用 gear_contracts 和自身模块；Runtime 无 Qt 依赖。GUI 专用依赖留在可选 gui extra。公共 v1 合约未修改。
@@ -32,19 +32,13 @@ manifest 已声明 SHELL / PULL、AVAILABLE / UNAVAILABLE 和 DIAGNOSTIC_LOGS。
 
 ## GUI 启动入口
 
-2026-09-18 用户要求增加双击启动入口并确认继续。按此前约定，小细节采用默认推荐方案：
-
-- 仓库根目录提供 Start-GEAR.cmd，固定使用脚本所在目录的 .venv，不依赖调用时的工作目录。
-- 启动时选择已有 Environment YAML / JSON；取消直接退出，不创建 Framework、获取会话锁或打开设备。
-- 选择后进入统一 GEAR 主窗口；项目、用例仍在主窗口选择。显式指定 --environment 的命令行用法保持不变。
-- 首次安装按 README 完成；缺少本地 Python 环境时显示安装命令。启动或关闭失败时保留控制台错误供查看。
-- 不改变插件合约、长期服务生命周期、配置预检或完全独占约束。
+2026-09-18 首版提供双击后选择环境的入口（a848cbe）。随后用户明确要求基础 GUI 独立于插件，并只使用一份默认环境，因此该选择流程已移除；现行行为与验证见 [基础 GUI 实现记录](desktop-status.md)。
 
 ## 验证证据
 
 本机 Windows、CPython 3.14、PySide6 6.11.2：
 
-- 完整 pytest：140 项通过（原 Framework 47 项，ADB / GUI 共新增 93 项）。
+- 首版双击入口完成时完整 pytest：140 项通过（原 Framework 47 项，ADB / GUI 共新增 93 项）；后续基础 GUI 的最新结果见独立记录。
 - ADB 传输测试通过真实子进程替代物理 adb 可执行文件，验证参数、USB/网络区分、重复序列号拒绝、离线/未授权、帧错误、查询超时、退出码、文件和日志生命周期。
 - 真实 Qt 控件测试验证完整切片提交、无效配置可修正、设备身份删除保留绑定、ACTIVE 禁用手动操作、缓存查看、GUI 线程回调和安全关闭。
 - 两次真实 Framework Run 复用同一插件服务；配置预检及取消不启动 ADB；单独进程确认 Runtime 不导入 Qt。
@@ -52,7 +46,7 @@ manifest 已声明 SHELL / PULL、AVAILABLE / UNAVAILABLE 和 DIAGNOSTIC_LOGS。
 - 验证离线/未授权/缺失、查询故障不冒充不可用、归档路径不受后续配置对象修改影响、取证取消和本地写入失败。
 - 已复现并修复日志写入及关闭同时报错时状态不更新的问题，检查目录创建和无效已存配置加载。
 - gear gui --help 通过；CLI 无 PySide6 时仍可运行，GUI 缺少依赖有明确提示。
-- 新增启动测试验证选择环境、显式环境跳过选择、取消不创建 Framework；从其他工作目录实际执行 Start-GEAR.cmd，通过真实 Qt 文件选择框进入 gear.adb 主窗口并关闭，以及取消选择后退出。
+- 首版曾验证环境选择与取消流程；现已由唯一环境默认加载、无插件首页及配置保留测试替代。
 - gear-framework wheel 构建通过，插件本身以独立目录交付。
 - [完整桌面截图](images/adb-workspace.png) 与 [取证配置页](images/adb-evidence.png) 已用实际 Framework、ADB Workspace 和未绑定示例环境渲染检查。
 - 使用本机 Platform-Tools 35.0.2 对实际服务执行一次 USB 发现，返回空列表；当前无连接设备。未声称真实 USB Shell / 拉取 / logcat 已通过硬件验收。

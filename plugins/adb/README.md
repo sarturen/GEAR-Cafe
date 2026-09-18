@@ -8,12 +8,12 @@
 
 ```powershell
 .\.venv\Scripts\python -m pip install -e ./doc/contracts -e ".[gui,test]"
-.\.venv\Scripts\gear gui --app-dir . --environment examples/adb/environment.yaml --project examples/adb/project.yaml --case examples/adb/case.yaml
+.\.venv\Scripts\gear gui --app-dir . --project examples/adb/project.yaml --case examples/adb/case.yaml
 ```
 
-第一次打开后，在 ADB 页面填入 adb 可执行文件的路径（在 PATH 中时填 adb），显式刷新 USB 列表并登记序列号，然后把 ADB.main 绑定到该序列号。也可直接手动登记暂未连接的设备。
+也可以双击根目录 Start-GEAR.cmd，直接进入基础主窗口。GUI 默认读取根目录唯一的 environment.yaml；首次自动生成空配置。在 ADB 页面填入 adb 可执行文件的路径（在 PATH 中时填 adb），显式刷新 USB 列表并登记序列号，然后创建 main 资源别名，将 ADB.main 绑定到该序列号。也可直接手动登记暂未连接的设备。
 
-配置修改实时保存到 Environment；示例初始不指定设备，因此预检会提示补全绑定。预检只检查配置，确认执行后才发送命令。点击“停止”后，当前调用及收尾完成前不会开放下一次执行。
+配置修改实时保存到同一份 environment.yaml，下次启动继续使用；初始配置为空，须先补全资源绑定。预检只检查配置，确认执行后才发送命令。点击“停止”后，当前调用及收尾完成前不会开放下一次执行。
 
 ## 生命周期与 USB 范围
 

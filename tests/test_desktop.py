@@ -104,8 +104,9 @@ def test_desktop_hosts_registered_workspace_and_dispatches_on_gui_thread(bench, 
     window = DesktopWindow(host)
     workspace = host._workspaces[0]
     try:
-        assert window.tabs.count() == 1
-        assert window.tabs.tabText(0) == "gear.demo"
+        assert window.tabs.count() == 2
+        assert window.tabs.tabText(0) == "首页"
+        assert window.tabs.tabText(1) == "gear.demo"
         workspace.widget.click()
         wait_gui(qapp, lambda: bool(workspace.results))
         assert workspace.results[0]["value"] == host._worker.thread.ident
@@ -245,18 +246,18 @@ def test_blocked_finalization_is_visible_and_can_close(desktop, qapp):
     wait_gui(qapp, lambda: host._closed)
 
 
-@pytest.mark.parametrize("choose_environment", [False, True])
 def test_gui_command_launches_without_required_case_or_project(
-    bench, qapp, monkeypatch, choose_environment
+    bench, qapp, monkeypatch
 ):
     from gear_framework.cli import main
     from gear_framework.desktop import DesktopWindow, QFileDialog
 
     closed = []
 
+    saved_environment = bench["environment"].read_bytes()
+
     def choose(*args, **kwargs):
-        assert choose_environment, "Explicit environment must skip the file picker"
-        return str(bench["environment"]), ""
+        pytest.fail("GUI startup must load its fixed environment without a file picker")
 
     monkeypatch.setattr(QFileDialog, "getOpenFileName", choose)
 
@@ -267,26 +268,67 @@ def test_gui_command_launches_without_required_case_or_project(
                 widget.close()
 
     args = ["gui", "--app-dir", str(bench["app"])]
-    if not choose_environment:
-        args.extend(["--environment", str(bench["environment"])])
     QTimer.singleShot(30, close_window)
     assert main(args) == 0
     assert closed == [bench["environment"].resolve()]
+    assert bench["environment"].read_bytes() == saved_environment
 
 
-def test_gui_cancel_environment_selection_does_not_start_framework(
-    bench, qapp, monkeypatch
+@pytest.mark.parametrize("plugins_directory", [False, True])
+def test_gui_starts_without_plugins_and_creates_one_environment(
+    tmp_path, qapp, monkeypatch, plugins_directory
 ):
     from gear_framework.cli import main
-    from gear_framework import desktop
+    from gear_framework.desktop import DesktopWindow, QFileDialog
+    from gear_framework.documents import load_yaml
 
-    monkeypatch.setattr(desktop.QFileDialog, "getOpenFileName", lambda *args: ("", ""))
+    if plugins_directory:
+        (tmp_path / "plugins").mkdir()
+    monkeypatch.setattr(
+        QFileDialog, "getOpenFileName",
+        lambda *args: pytest.fail("No startup file picker is allowed"),
+    )
+    opened = []
 
-    def unexpected_framework(*args, **kwargs):
-        pytest.fail("Cancelling environment selection must not create a Framework")
+    def close_window():
+        for widget in qapp.topLevelWidgets():
+            if isinstance(widget, DesktopWindow) and widget.isVisible():
+                opened.append({
+                    "environment": widget.framework.environment_path,
+                    "tabs": [widget.tabs.tabText(i) for i in range(widget.tabs.count())],
+                    "inputs": widget.case_path.isEnabled() and widget.project_path.isEnabled(),
+                    "plugins": list(widget.framework._registry.entries),
+                })
+                widget.close()
 
-    monkeypatch.setattr(desktop, "Framework", unexpected_framework)
-    assert main(["gui", "--app-dir", str(bench["app"])]) == 0
+    QTimer.singleShot(30, close_window)
+    assert main(["gui", "--app-dir", str(tmp_path)]) == 0
+    assert opened == [{
+        "environment": tmp_path / "environment.yaml",
+        "tabs": ["首页"], "inputs": True, "plugins": [],
+    }]
+    assert load_yaml(tmp_path / "environment.yaml") == {
+        "api": "gear.environment/v1", "name": "GEAR",
+        "plugins": {}, "resources": {}, "devices": {},
+    }
+
+
+def test_gui_rejects_invalid_saved_environment_without_overwriting(
+    tmp_path, qapp, monkeypatch, capsys
+):
+    from gear_framework.cli import main
+    from gear_framework.desktop import QFileDialog
+
+    monkeypatch.setattr(
+        QFileDialog, "getOpenFileName",
+        lambda *args: pytest.fail("Saved environment must be loaded directly"),
+    )
+    environment = tmp_path / "environment.yaml"
+    saved = b"api: invalid\n"
+    environment.write_bytes(saved)
+    assert main(["gui", "--app-dir", str(tmp_path)]) == 3
+    assert environment.read_bytes() == saved
+    assert "GEAR:" in capsys.readouterr().err
 
 
 def test_cli_run_remains_headless_and_gui_explains_optional_dependency(bench):
@@ -313,7 +355,7 @@ sys.exit(main(sys.argv[1:]))
     assert run.returncode == 0, run.stderr
     assert '"outcome": "PASS"' in run.stdout
     gui = subprocess.run(
-        [sys.executable, "-c", code, "gui", *paths],
+        [sys.executable, "-c", code, "gui", "--app-dir", str(bench["app"])],
         capture_output=True, text=True, env=env, timeout=10,
     )
     assert gui.returncode == 3

@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -91,14 +92,13 @@ class DesktopWindow(QMainWindow):
 
         splitter = QSplitter(Qt.Orientation.Vertical)
         self.tabs = QTabWidget()
+        self.tabs.addTab(self._home_page(), "首页")
         for plugin_id, entry in framework._registry.entries.items():
             if entry.workspace is not None:
                 workspace = gui.create_workspace(
                     framework, plugin_id, self.dispatcher.dispatch
                 )
                 self.tabs.addTab(workspace.widget, plugin_id)
-        if not self.tabs.count():
-            self.tabs.addTab(QLabel("当前插件未提供工作区。请选择用例和项目开始预检。"), "插件")
         splitter.addWidget(self.tabs)
         results = QWidget()
         result_layout = QVBoxLayout(results)
@@ -133,6 +133,37 @@ class DesktopWindow(QMainWindow):
         self.timer.timeout.connect(self.refresh_status)
         self.timer.start()
         self.refresh_status()
+
+    def _home_page(self):
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(16)
+        title = QLabel("欢迎使用 GEAR")
+        title.setStyleSheet("font-size: 20px; font-weight: 600")
+        layout.addWidget(title)
+        steps = QLabel(
+            "1. 在插件页面配置设备和资源，配置会保存到同一份环境文件。\n"
+            "2. 在上方选择项目和测试用例，点击“开始预检”。\n"
+            "3. 检查预检结果并确认执行，完成后查看报告。"
+        )
+        steps.setWordWrap(True)
+        layout.addWidget(steps)
+        plugins = QGroupBox("已安装插件")
+        plugin_layout = QVBoxLayout(plugins)
+        entries = self.framework._registry.entries
+        if entries:
+            for plugin_id, entry in entries.items():
+                label = QLabel(f"{plugin_id}   ·   {entry.version}")
+                label.setWordWrap(True)
+                plugin_layout.addWidget(label)
+        else:
+            empty = QLabel("尚未安装插件。安装插件并重启后，即可使用对应功能。")
+            empty.setWordWrap(True)
+            plugin_layout.addWidget(empty)
+        layout.addWidget(plugins)
+        layout.addStretch()
+        return page
 
     def _file_row(self, form, label, initial):
         row = QWidget()
@@ -283,18 +314,18 @@ class DesktopWindow(QMainWindow):
         self.close()
 
 
-def run_gui(app_dir, environment=None, *, case=None, project=None):
+def run_gui(app_dir, *, case=None, project=None):
     app = QApplication.instance() or QApplication(sys.argv[:1])
-    if environment is None:
-        selected, _ = QFileDialog.getOpenFileName(
-            None,
-            "GEAR · 选择环境配置",
-            str(Path(app_dir).resolve()),
-            "YAML / JSON (*.yaml *.yml *.json);;所有文件 (*)",
-        )
-        if not selected:
-            return 0
-        environment = Path(selected)
+    app_dir = Path(app_dir).resolve()
+    environment = app_dir / "environment.yaml"
+    try:
+        with environment.open("x", encoding="utf-8") as stream:
+            stream.write(
+                "api: gear.environment/v1\nname: GEAR\n"
+                "plugins: {}\ndevices: {}\nresources: {}\n"
+            )
+    except FileExistsError:
+        pass
     framework = Framework(app_dir, environment)
     try:
         window = DesktopWindow(framework, case=case, project=project)

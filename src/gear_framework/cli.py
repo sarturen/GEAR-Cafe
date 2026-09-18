@@ -21,9 +21,6 @@ def main(argv=None):
         run.add_argument("--" + flag, required=True, type=Path)
     gui = commands.add_parser("gui", help="Open the optional Qt Workspace desktop")
     gui.add_argument("--app-dir", required=True, type=Path)
-    gui.add_argument(
-        "--environment", type=Path, help="Environment file; omit to choose in the GUI"
-    )
     for flag in ("case", "project"):
         gui.add_argument("--" + flag, type=Path)
     args = parser.parse_args(argv)
@@ -31,9 +28,7 @@ def main(argv=None):
         try:
             from .desktop import run_gui
 
-            return run_gui(
-                args.app_dir, args.environment, case=args.case, project=args.project
-            )
+            return run_gui(args.app_dir, case=args.case, project=args.project)
         except ModuleNotFoundError as exc:
             if exc.name == "PySide6":
                 print("GEAR GUI requires: pip install 'gear-framework[gui]'", file=sys.stderr)

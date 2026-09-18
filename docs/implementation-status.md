@@ -41,7 +41,7 @@
 
 ## 边界
 
-本记录对应 Framework v1 基线；后续 GUI Shell 和 ADB 插件进度见 [ADB 实现记录](adb-status.md)。
+本记录对应 Framework v1 基线；后续进度见 [基础 GUI 实现记录](desktop-status.md) 和 [ADB 实现记录](adb-status.md)。
 真实 COM、摄像头、继电器等驱动仍未实现。
 Framework v1 基线的 Workspace 桥通过队列派发测试，后续真实 Qt 控件验证单独记录。
 Unix 锁回退已实现，本轮执行证据来自 Windows。

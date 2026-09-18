@@ -47,17 +47,19 @@ On Windows, install GUI dependencies once, then double-click **[Start-GEAR.cmd](
 .\.venv\Scripts\python -m pip install -e ".[gui]"
 ```
 
-Choose an Environment file in the opening dialog (for ADB, start with `examples/adb/environment.yaml`). The unified desktop loads the installed plugin Workspaces; select the project and case in the main window. Cancel the opening dialog to exit without starting a session. The launcher uses this folder's `.venv` regardless of the current working directory and keeps errors visible in its console.
+The launcher opens the base GEAR window directly, including when no plugins are installed. The Home tab is always available, and installed plugin Workspaces appear as additional tabs. The launcher uses this folder's `.venv` regardless of the current working directory and keeps errors visible in its console.
+
+The GUI always loads **`<app-dir>/environment.yaml`**. On first launch it creates an empty environment; later launches reuse the saved file. All plugin configuration edits go to this same file. There is no environment picker or GUI environment override. The root file is local configuration and is ignored by Git; existing contents are never reset on startup. Environment files under `examples/` are standalone CLI/API examples, not additional GUI configurations.
 
 You can also launch directly with known files:
 
 ```powershell
-.\.venv\Scripts\gear gui --app-dir . --environment examples/adb/environment.yaml --project examples/adb/project.yaml --case examples/adb/case.yaml
+.\.venv\Scripts\gear gui --app-dir . --project examples/adb/project.yaml --case examples/adb/case.yaml
 ```
 
-The example starts with an unassigned `ADB.main`. Configure the ADB executable, register a USB serial and save its resource binding in the Workspace. Environment/case/project arguments are optional; omitting `--environment` opens the same startup dialog.
+The first environment has no devices or resources. To run the ADB example, configure the ADB executable, register a USB serial and create the `ADB.main` resource binding in the Workspace. Case/project arguments are optional and can be selected in the main window.
 The desktop presents Preflight before enabling confirmation, shows diagnostics and report paths, and waits cooperatively for in-flight work when closing.
-See the [ADB implementation and decision record](docs/adb-status.md), [desktop preview](docs/images/adb-workspace.png), and [failure evidence configuration](docs/images/adb-evidence.png).
+See the [base GUI and startup decisions](docs/desktop-status.md), [ADB implementation record](docs/adb-status.md), and [failure evidence configuration](docs/images/adb-evidence.png).
 
 A GUI shell supplies a dispatcher that posts a zero-argument callback to its GUI thread.
 Create contexts and Workspaces on that thread:
