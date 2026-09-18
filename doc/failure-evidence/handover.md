@@ -1,7 +1,11 @@
 # GEAR Failure & Evidence Cafe — Handover
 
-Status: **Important open syntax remains**  
-Date: 2026-09-17
+Status: **Historical context; v1 evidence declaration frozen**
+Date: 2026-09-18
+
+The final v1 shape is defined by
+[GEAR Flow DSL Contract v1](../dsl/v1.md) and
+[GEAR Plugin Contract v1](../plugin-contract/v1.md).
 
 ## 1. Two motivating stability cases
 

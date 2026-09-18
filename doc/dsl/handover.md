@@ -1,7 +1,10 @@
 # GEAR DSL Cafe — Handover
 
-Status: **Continue from here, do not restart from generic test-framework design**  
-Date: 2026-09-17
+Status: **Historical context; v1 questions resolved**
+Date: 2026-09-18
+
+The normative contract is [GEAR Flow DSL Contract v1](./v1.md). This handover
+preserves the discussion path but no longer contains open v1 design work.
 
 ## 1. Why this Cafe happened
 
@@ -175,7 +178,7 @@ If the goal is to collect a failure rate, create a dedicated observation/statist
 
 ---
 
-## 10. Remaining DSL-adjacent open questions
+## 10. DSL-adjacent questions resolved by v1
 
 ### Failure evidence surface syntax
 
@@ -187,27 +190,22 @@ screen screenshot
 console dump
 ```
 
-But the final test-case syntax for declaring requested evidence has not been fixed.
+v1 uses a top-level declarative `evidence_on_fail` list. Each entry names a
+resource, a Plugin evidence capability, and optional arguments.
 
-Constraint:
-
-> evidence declaration must not become an arbitrary `on_failure` sub-flow.
+It is not an arbitrary `on_failure` sub-flow.
 
 ### Zero-bind observation case
 
 Observation resources may be partially absent and become coverage gaps.
 
-Still open:
-
-> if an assertion targets a wildcard and *none* of those observations bind in the current Environment, should the case be rejected or reported as not-covered/not-applicable?
-
-It must never silently PASS.
+If a wildcard resolves to zero valid bindings, Preflight rejects the Test Case.
+Partial binding remains executable with explicit coverage gaps.
 
 ### Exact concrete grammar
 
-Examples in the conclusion are semantic sketches, not a finalized parser grammar.
-
-Do not accidentally freeze example capitalization or punctuation into a spec before a dedicated syntax pass.
+v1 freezes a canonical YAML representation with `do`, `wait`, `assert`, and
+`repeat` step mappings. The older uppercase examples remain semantic shorthand.
 
 ---
 

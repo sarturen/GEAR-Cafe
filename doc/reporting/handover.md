@@ -1,6 +1,6 @@
 # GEAR Reporting & Coverage Cafe — Handover
 
-Status: **Core rule accepted, schema not designed**  
+Status: **Core rule accepted, schema not designed**
 Date: 2026-09-17
 
 ## 1. Why this became important

@@ -1,6 +1,6 @@
 # GEAR Framework Runtime — Current Conclusion
 
-Status: **Active**  
+Status: **Active**
 Date: 2026-09-18
 
 ## 1. Purpose
@@ -110,25 +110,29 @@ The API does not expose Plugin instances or Executor internals.
 
 GUI updates use simple callbacks/listeners. A PySide6 adapter may translate callbacks into Qt signals. Do not introduce a general event bus or message broker.
 
-### Configuration GUI path
+### Plugin Workspace path
 
-Resource configuration is Plugin-owned and does not pass through the Test Executor.
+Plugin configuration and manual tools are Plugin-owned and do not pass through
+the Test Executor.
 
 Conceptually:
 
 ```text
 GUI host
-→ Plugin Registry discovers Plugin GUI Editor
-→ Plugin Editor performs device-specific configuration/preview
-→ Plugin Editor returns serializable config payload
-→ Environment Configuration stores that payload
+→ Plugin Registry discovers one Plugin Workspace
+→ Workspace performs configuration/preview/manual control/status
+→ Workspace commits a complete Plugin slice after semantic changes
+→ GUI host atomically persists Environment
 ```
 
-Framework does not interpret Plugin-specific configuration fields.
+Framework does not interpret Plugin-specific configuration fields. There is no
+global edit mode, Save/Cancel workflow, dirty state, or field-patch protocol.
 
-Plugin GUI Editors are loaded only by GUI. CLI execution and Framework Runtime do not import them.
+Plugin GUI Workspaces are loaded only by GUI. CLI execution and Framework
+Runtime do not import them.
 
-Configuration mode is unavailable while a Run is active so configuration tools and Runtime cannot compete for hardware.
+During an Active Run, Workspace configuration and manual controls are read-only;
+status display may continue. v1 adds no connection handoff or resource manager.
 
 ---
 
@@ -412,7 +416,13 @@ runtime Agent involvement
 
 ---
 
-## 17. One-sentence definition
+## 17. Frozen contract references
+
+- [GEAR Flow DSL Contract v1](../dsl/v1.md)
+- [GEAR Plugin Contract v1](../plugin-contract/v1.md)
+- [GEAR Project and Environment Contract v1](../environment-model/v1.md)
+
+## 18. One-sentence definition
 
 GEAR Framework Runtime is:
 

@@ -1,7 +1,9 @@
 # GEAR Environment Model — Current Conclusion
 
-Status: **Active**  
-Date: 2026-09-17
+Status: **v1 frozen**
+Date: 2026-09-18
+
+Normative contract: [GEAR Project and Environment Contract v1](./v1.md).
 
 ## 1. Three distinct concerns
 
@@ -192,16 +194,22 @@ The GUI is expected to support tasks such as:
 
 The runtime should consume this configuration deterministically.
 
+Each Plugin owns one Workspace page for its complete configuration and resource
+set. Workspace changes are persisted in real time as full Plugin-slice
+replacements. Incomplete and invalid Environment states may be saved but cannot
+pass Preflight.
+
+The configured ADB serial is a paper device identity. It remains meaningful
+when ADB is offline. Discovery never rewrites it, and changing or deleting it
+does not cascade into other Plugin configurations.
+
 ---
 
-## 9. Current open questions
+## 9. Frozen v1 boundary
 
-Still to design later:
+v1 defines the Project and Environment YAML shapes, Plugin-level and
+resource-level configuration boundaries, Workspace persistence, Run snapshot,
+and zero-binding rejection.
 
-- exact Project Definition file/schema;
-- exact Environment file/schema;
-- environment config version/hash in reports;
-- GUI editor architecture;
-- how zero-bound wildcard observations are classified.
-
-Do not expand this topic into a general hardware-topology system unless a real requirement appears.
+Do not expand this topic into a general hardware-topology or automatic
+relationship-maintenance system unless a real requirement appears.

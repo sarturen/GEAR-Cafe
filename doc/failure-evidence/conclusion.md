@@ -1,7 +1,11 @@
 # GEAR Failure & Evidence — Current Conclusion
 
-Status: **Partial / still open**  
-Date: 2026-09-17
+Status: **v1 behavior frozen**
+Date: 2026-09-18
+
+Normative syntax and Plugin result shapes are defined by
+[GEAR Flow DSL Contract v1](../dsl/v1.md) and
+[GEAR Plugin Contract v1](../plugin-contract/v1.md).
 
 ## 1. Functional assertion failure
 
@@ -150,10 +154,12 @@ This is a different system and should not be smuggled into TearDown.
 
 ---
 
-## 10. Open question
+## 10. Frozen v1 declaration
 
-Final syntax/structure for declaring requested evidence is still undecided.
+Requested evidence is a top-level declarative `evidence_on_fail` list. Each
+entry names a resource, a Plugin-declared evidence capability, and optional
+schema-validated arguments.
 
-Constraint:
-
-> it must be declarative and narrow, not an arbitrary executable failure sub-flow.
+It is deliberately not an executable failure sub-flow. Collection runs best
+effort after `FAIL`, in declaration/expansion order, and never replaces the
+original failure.

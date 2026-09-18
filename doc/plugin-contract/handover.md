@@ -1,7 +1,11 @@
 # GEAR Plugin Contract Cafe — Handover
 
-Status: **Continue from Resource-Type capability contracts**  
-Date: 2026-09-17
+Status: **Historical context; v1 contract frozen**
+Date: 2026-09-18
+
+The normative contract is [GEAR Plugin Contract v1](./v1.md). Later GUI Cafe
+decisions replaced the configuration-editor model below with one complete
+Plugin Workspace and real-time full-slice persistence.
 
 ## 1. Why the original “capability” idea needed refinement
 
@@ -72,7 +76,7 @@ This rule should be treated as hard unless reality later proves it impossible.
 
 ---
 
-## 5. GUI configuration ownership
+## 5. GUI configuration ownership (superseded shape)
 
 A later Framework/GUI Cafe asked how GUI should interact with low-level Plugins.
 
@@ -83,7 +87,7 @@ Test Runtime:
 GUI -> Framework -> Plugin Runtime -> hardware
 
 Environment configuration:
-GUI host -> Plugin GUI Editor -> Plugin-owned config payload
+GUI host -> Plugin GUI Workspace -> Plugin-owned Environment slice
 ```
 
 The user explicitly chose:
@@ -100,19 +104,21 @@ Plugin owns:
 - previews and interactive tools such as camera ROI selection;
 - the PySide6 configuration editor presented inside the GUI host.
 
-Framework/GUI owns:
+The originally proposed Framework/GUI responsibilities were:
 
 - the logical resource identity being configured;
-- editor hosting and Save/Cancel flow;
+- editor hosting and persistence;
 - persistence of the returned serializable payload;
 - preventing configuration sessions during an Active Run.
 
-The GUI editor is loaded only by GUI. CLI execution and Framework Runtime use the Plugin Runtime surface and saved Environment data without importing the editor.
+The final v1 contract keeps the loading boundary but replaces Save/Cancel and a
+configuration-only editor with one Plugin Workspace. It combines configuration,
+preview, status, and manual controls and commits the complete Plugin slice after
+semantic changes.
 
 ---
 
-## 6. Next Cafe posture
+## 6. v1 outcome
 
-The next Plugin discussion may focus on manifest/discovery and the smallest editor factory/context contract.
-
-Do not reintroduce a universal configuration schema renderer unless repeated Plugin implementations prove it useful.
+Manifest/discovery, Runtime, validation, evidence, and Workspace context are now
+frozen in `v1.md`. A universal configuration schema renderer remains rejected.

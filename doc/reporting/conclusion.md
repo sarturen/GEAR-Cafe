@@ -1,6 +1,6 @@
 # GEAR Reporting & Coverage — Current Conclusion
 
-Status: **Partial / core invariant accepted**  
+Status: **Partial / core invariant accepted**
 Date: 2026-09-17
 
 ## 1. Result and coverage are separate
@@ -162,10 +162,12 @@ If Framework cannot deterministically validate what the test asks for, do not ex
 
 ---
 
-## 8. Open question
+## 8. Zero-binding wildcard
 
-Still undecided:
+Resolved for v1:
 
-> if an assertion targets a Resource Type wildcard and zero observations bind, should the result be REJECTED or a dedicated NOT-COVERED/NOT-APPLICABLE state?
+> if an assertion targets a Resource Type wildcard and zero valid observations
+> bind, Preflight rejects the Test Case.
 
-It must never be reported as PASS.
+There is no vacuous `PASS` and no separate top-level
+`NOT-COVERED`/`NOT-APPLICABLE` result in v1.

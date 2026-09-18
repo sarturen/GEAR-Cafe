@@ -1,7 +1,11 @@
 # GEAR DSL — Current Conclusion
 
-Status: **Active / relatively mature**  
-Date: 2026-09-17
+Status: **v1 frozen**
+Date: 2026-09-18
+
+Normative contract: [GEAR Flow DSL Contract v1](./v1.md). This conclusion is a
+short design explanation; the v1 document defines the exact YAML structure,
+timing rules, validation, evidence declaration, and conformance requirements.
 
 ## 1. Purpose
 
@@ -53,6 +57,10 @@ REPEAT
 ```
 
 No other general control-flow or data-processing syntax is currently justified.
+
+The canonical v1 representation is YAML using the step union `do`, `wait`,
+`assert`, and `repeat`. The uppercase forms below are semantic shorthand, not a
+second parser syntax.
 
 ---
 
@@ -379,6 +387,9 @@ the Project may declare six screens while the current Environment binds only thr
 
 The available three may be tested, but the other three must be explicitly reported as **not covered**.
 
+If a wildcard resolves to zero valid Environment bindings, Preflight rejects the
+Test Case. An empty wildcard never passes vacuously.
+
 ### Validation capability cannot be missing
 
 If the test requires a particular result check and the Plugin has no corresponding validation capability, reject before execution.
@@ -399,6 +410,10 @@ Assertion FAIL
 The current DSL does not support assertion-level `continue`, auto-retry, auto-recovery, or adaptive test strategy.
 
 If the purpose is statistical observation rather than functional pass/fail, write a dedicated measurement-oriented test case instead of overloading normal assertions.
+
+Failure evidence is declared in the top-level `evidence_on_fail` list. It names
+only Plugin evidence capabilities and arguments; it is not an executable
+`on_failure` step list.
 
 ---
 
@@ -456,6 +471,11 @@ runtime Agent involvement
 ---
 
 ## 21. Four reference thought experiments
+
+Names such as `startup_timeout`, `check_interval`, `N`, and
+`<project-specific-validation>` below are discussion placeholders, not v1 DSL
+variables. The normative v1 YAML uses literal durations/counts and declared
+Plugin capability names.
 
 ### Case 1 — boot then 1h stability
 

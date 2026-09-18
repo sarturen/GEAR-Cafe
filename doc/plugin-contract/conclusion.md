@@ -1,7 +1,12 @@
 # GEAR Plugin Contract — Current Conclusion
 
-Status: **Active**  
-Date: 2026-09-17
+Status: **v1 frozen**
+Date: 2026-09-18
+
+Normative contract: [GEAR Plugin Contract v1](./v1.md). This conclusion is a
+short architectural explanation; the v1 document defines the manifest,
+capability schemas, Runtime protocol, GUI Workspace protocol, validation, and
+conformance requirements.
 
 ## 1. Plugin responsibility
 
@@ -11,11 +16,10 @@ Conceptually, a Resource Type may expose:
 
 ```text
 operations
-observations
-validations
+conditions
 evidence/capture capabilities
 configuration contract
-GUI configuration editor
+GUI Workspace
 ```
 
 Not every Resource Type must look structurally identical.
@@ -195,7 +199,7 @@ Framework can then use that contract for:
 - preflight;
 - authoring context;
 - Environment config validation;
-- GUI configuration-editor discovery.
+- GUI Workspace discovery.
 
 ---
 
@@ -269,9 +273,9 @@ Configuration output must be serializable so Environment Configuration can persi
 
 ---
 
-## 11. Plugin owns its GUI configuration editor
+## 11. Plugin owns one GUI Workspace
 
-Each Plugin defines how its resources are configured in GUI.
+Each Plugin defines one page that manages all of that Plugin's resources.
 
 Examples:
 
@@ -289,26 +293,41 @@ SCREEN/Camera Plugin
     -> camera preview and ROI drawing
 ```
 
-The GUI provides the host/container and Save/Cancel workflow. The Plugin provides the actual editor behavior and returns its serializable configuration payload.
+The Workspace owns Plugin-specific configuration, preview, status, and manual
+control. It submits its complete Plugin slice to the GUI host after each
+semantic configuration change. The host persists it immediately. There is no
+global edit mode, Save/Cancel workflow, dirty state, or field-patch protocol.
 
 A Plugin may use shared GUI helper controls, but Framework does not generate or interpret a universal configuration form.
 
-The GUI editor may depend on PySide6. It is a separate GUI-facing entry point and is loaded only by the GUI. Runtime contract loading and CLI execution must not require importing the GUI editor.
+The GUI Workspace may depend on PySide6. It is a separate GUI-facing entry point
+and is loaded only by GUI. Runtime contract loading and CLI execution must not
+require importing it.
 
-The editor may perform live configuration actions such as:
+The Workspace may perform live configuration and manual actions such as:
 
 ```text
 device discovery
 connection trial
 camera preview
 ROI selection
+serial and ADB send/receive
+relay physical/logical status and control
 ```
 
-These actions are configuration tools, not Runtime Preflight guarantees.
+Discovery and preview are convenience tools, not Runtime Preflight guarantees.
+Manual commands execute immediately and are not persisted as configuration.
 
-The editor returns data; it does not contribute DSL grammar, execute Test Cases, or control an Active Run.
+The Workspace does not contribute DSL grammar or execute Test Cases. During an
+Active Run, configuration and manual controls are read-only; status display may
+continue.
 
-Configuration sessions are not opened while a Run is active, preventing GUI configuration tools and Runtime from competing for hardware.
+One Plugin has one top-level Workspace page. It may organize its own internal
+panels or sub-tabs; GUI Shell does not create a page per resource.
+
+ADB device ids supplied by the host are configured paper identities, not live
+connection claims. Plugins do not call each other. Changing or deleting an ADB
+device id does not cascade into other Plugin slices.
 
 ---
 
@@ -320,7 +339,7 @@ One Plugin package may contain both surfaces:
 Plugin Package
 ├── Runtime Contract / implementation
 ├── Configuration validation
-└── GUI configuration editor
+└── GUI Workspace
 ```
 
 This does not make Framework Runtime depend on GUI.
@@ -328,7 +347,7 @@ This does not make Framework Runtime depend on GUI.
 The dependency direction is:
 
 ```text
-GUI -> Plugin GUI Editor -> Plugin configuration data
+GUI -> Plugin GUI Workspace -> Environment Plugin slice
 Framework Runtime -> Plugin Runtime Contract -> hardware
 ```
 
@@ -336,13 +355,17 @@ Both sides meet only through persisted Environment configuration data and the de
 
 ---
 
-## 13. Open questions for later
+## 13. Frozen v1 surface
 
-Not yet designed:
+v1 now defines:
 
-- exact manifest/schema format;
-- versioning/compatibility rules;
-- Plugin discovery/registration;
-- exact GUI editor factory/context API;
-- shared GUI helper SDK, if repeated editor patterns justify one;
-- formal evidence/capture capability shape.
+- `gear-plugin.yaml` manifest and `gear.plugin/v1` api id;
+- JSON Schema capability arguments;
+- Runtime creation, operation, condition, evidence, and cleanup protocols;
+- structured configuration validation and diagnostics;
+- one Workspace factory/context per Plugin;
+- full-slice real-time commits;
+- declarative evidence results and conformance requirements.
+
+Hot reload, dependency solving, remote installation, process isolation, field
+patching, and universal generated forms remain explicit non-goals.

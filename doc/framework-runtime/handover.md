@@ -1,7 +1,10 @@
 # GEAR Framework Runtime Cafe — Handover
 
-Status: **Core runtime shape accepted; concrete schemas and code structure remain open**  
+Status: **Historical context; v1 contracts now freeze Plugin/DSL integration**
 Date: 2026-09-18
+
+See [GEAR Architecture v1](../architecture-v1.md) and the linked normative
+contracts for the frozen implementation boundary.
 
 ## 1. Why this Cafe happened
 
@@ -139,12 +142,13 @@ The following remain open and should be discussed only when needed:
 
 - exact Run status/event/report schemas;
 - exact minimal Control Host lock used across GUI and CLI processes;
-- resource instance creation/open/close lifecycle details;
+- exact internal resource connection-sharing strategy;
 - Framework callback threading rules needed by PySide6;
-- the smallest GUI host/context API for Plugin-provided configuration editors;
 - Run archive retention and deletion policy;
-- how cleanup failure is represented without introducing a separate ERROR result;
-- the still-open zero-bound wildcard Observation outcome from Reporting.
+- how cleanup failure is represented without introducing a separate ERROR result.
+
+Plugin Runtime/Workspace protocols and zero-bound wildcard rejection are now
+resolved by the v1 contracts.
 
 Do not jump into Plugin process isolation, distributed execution, daemon hosting, or parallel scheduling.
 

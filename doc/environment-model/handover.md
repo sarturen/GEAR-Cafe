@@ -1,7 +1,10 @@
 # GEAR Environment Model Cafe — Handover
 
-Status: **Continue from the simple real bench model**  
-Date: 2026-09-17
+Status: **Historical context; v1 data model frozen**
+Date: 2026-09-18
+
+The normative data model is
+[GEAR Project and Environment Contract v1](./v1.md).
 
 ## 1. Important correction during Cafe
 
