@@ -1,6 +1,6 @@
 # GEAR Plugin Contract — Current Conclusion
 
-Status: **v1 frozen**
+Status: **Summary; revised v1 and shared package are normative**
 Date: 2026-09-18
 
 Normative contract: [GEAR Plugin Contract v1](./v1.md). This conclusion is a
@@ -351,7 +351,16 @@ GUI -> Plugin GUI Workspace -> Environment Plugin slice
 Framework Runtime -> Plugin Runtime Contract -> hardware
 ```
 
-Both sides meet only through persisted Environment configuration data and the declared Plugin identity.
+Both sides use the persisted Environment configuration and the same long-lived
+Plugin session. The GUI host passes a Workspace its own session; worker-routed
+manual actions and Runtime capabilities share that session's private device
+services. Different Plugins still never call one another.
+
+Plugin sessions and COM/camera/relay connections outlive individual Test Cases.
+begin_run/end_run isolate per-Run state; close is application-session shutdown.
+The host holds ACTIVE until all execution, evidence, cleanup, reporting and
+Run-task exit have completed. Public call signatures and data are supplied by
+the Qt-free gear_contracts package.
 
 ---
 

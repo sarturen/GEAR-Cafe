@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gear-contracts"
+version = "1.0.0"
+description = "Shared dependency-free GEAR v1 interface definitions"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gear_contracts*"]
+
+[tool.setuptools.package-data]
+gear_contracts = ["py.typed"]

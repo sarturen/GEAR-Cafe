@@ -124,7 +124,7 @@ On failure, do not automatically execute DUT restoration that could destroy inci
 
 ## 8. Framework cleanup is separate
 
-Framework must always clean up its own resources:
+Framework must always clean up its Run-local resources:
 
 ```text
 watchers
@@ -135,6 +135,12 @@ file handles
 ```
 
 This cleanup must not modify DUT state in a way that destroys evidence.
+Session-owned connections and passive observers remain available across Runs.
+Run cleanup must finish, including task exit and reporting, before another Run.
+Cleanup/report failure blocks the session. Provisional PASS becomes FAIL; existing
+FAIL/STOPPED and original failures remain. Record execution_result and ordered
+finalization errors separately. Do not restart device evidence because of a
+finalization failure; follow Runtime v1's diagnostic recording rules.
 
 ---
 

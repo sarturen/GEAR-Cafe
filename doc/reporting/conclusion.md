@@ -1,6 +1,6 @@
 # GEAR Reporting & Coverage — Current Conclusion
 
-Status: **Partial / core invariant accepted**
+Status: **Summary; Runtime v1 defines report data**
 Date: 2026-09-17
 
 ## 1. Result and coverage are separate
@@ -95,14 +95,17 @@ At minimum, likely candidates include:
 
 ```text
 Environment identity
-Environment config revision/hash
+Archived Environment reference
 resolved logical resources
 Plugin versions/capability contract versions
 actual covered targets
 uncovered targets
 ```
 
-Exact schema is not yet finalized.
+Exact fields are defined by `RunReport` in
+[gear_contracts.data](../contracts/gear_contracts/data.py), with event/report
+semantics in [Runtime v1](../framework-runtime/v1.md). No configuration hash or
+revision-coordination mechanism is required.
 
 ---
 
@@ -162,7 +165,17 @@ If Framework cannot deterministically validate what the test asks for, do not ex
 
 ---
 
-## 8. Zero-binding wildcard
+## 8. Finalization diagnostics
+
+Keep execution_result and final result separate. Each finalization failure records
+stage, Plugin (or Framework), UTC time, code/message and original exception data.
+Preserve the primary execution failure and clearly disclose blocked execution.
+Do not call a partial/failed report write successful persistence.
+When report writing fails, status and GUI/CLI retain the error; attempt one
+ordinary session-log append and disclose if that also fails. Runtime v1 and
+FinalizationFailure define the exact record.
+
+## 9. Zero-binding wildcard
 
 Resolved for v1:
 
