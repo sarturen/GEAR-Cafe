@@ -1,0 +1,7 @@
+api: gear.project/v1
+name: demo_project
+resources:
+  DEMO.main:
+    type: DEMO
+  DEMO.spare:
+    type: DEMO

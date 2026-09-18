@@ -1,0 +1,20 @@
+api: gear.dsl/v1
+name: demo_on
+setup:
+  - do:
+      resource: DEMO.main
+      operation: ON
+body:
+  - assert:
+      all:
+        - resource: DEMO.*
+          condition: IS_ON
+      for: 100ms
+      every: 30ms
+teardown:
+  - do:
+      resource: DEMO.main
+      operation: OFF
+evidence_on_fail:
+  - resource: DEMO.main
+    evidence: STATE

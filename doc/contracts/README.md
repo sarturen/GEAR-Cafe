@@ -21,5 +21,6 @@ rejected, not negotiated.
 See [Architecture](../architecture-v1.md),
 [Plugin](../plugin-contract/v1.md) and
 [Runtime](../framework-runtime/v1.md).
-This repository supplies contracts, not a functioning Framework or device
-Plugins. Import checks do not establish Runtime or hardware conformance.
+This package supplies contracts, not execution or device implementations.
+The [Framework implementation](../../README.md) is a separate package in this
+repository. Import checks alone do not establish Runtime or hardware conformance.
