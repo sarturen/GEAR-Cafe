@@ -1,0 +1,23 @@
+api: gear.dsl/v1
+name: verify-power-cycle
+description: KL15 断电后 ADB 与画面一起消失，重新上电后按台架启动时间恢复。
+setup:
+  - do: {resource: POWER.kl30, operation: ON}
+body:
+  - do: {resource: POWER.kl15, operation: OFF}
+  - assert:
+      all:
+        - {resource: POWER.kl15, condition: IS_OFF}
+        - {resource: ADB.main, condition: UNAVAILABLE}
+      within: 2s
+      every: 100ms
+
+  - do: {resource: POWER.kl15, operation: ON}
+  - assert:
+      all:
+        - {resource: ADB.main, condition: AVAILABLE}
+      within: 10s
+      every: 200ms
+
+teardown:
+  - do: {resource: POWER.kl15, operation: ON}

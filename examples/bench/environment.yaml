@@ -1,0 +1,10 @@
+api: gear.environment/v1
+name: demo_bench
+plugins:
+  gear.demo:
+    config: {}
+resources:
+  DEMO.main:
+    type: DEMO
+    plugin: gear.demo
+    config: {}

@@ -1,0 +1,71 @@
+api: gear.plugin/v1
+id: gear.adb
+version: 1.0.0
+entrypoints:
+  runtime: gear_adb.runtime:create_plugin
+  workspace: gear_adb.workspace:create_workspace
+resource_types:
+  ADB:
+    operations:
+      SHELL:
+        args_schema:
+          type: object
+          properties:
+            command:
+              type: string
+              minLength: 1
+              pattern: '\S'
+          required: [command]
+          additionalProperties: false
+      PULL:
+        args_schema:
+          type: object
+          properties:
+            remote_path:
+              type: string
+              pattern: '^/'
+          required: [remote_path]
+          additionalProperties: false
+      FASTBOOT:
+        args_schema:
+          type: object
+          properties:
+            arguments:
+              type: array
+              minItems: 1
+              items:
+                type: string
+                minLength: 1
+            timeout_s:
+              type: number
+              exclusiveMinimum: 0
+              maximum: 300
+          required: [arguments]
+          additionalProperties: false
+    conditions:
+      AVAILABLE: {}
+      UNAVAILABLE: {}
+      STATE_IS:
+        args_schema:
+          type: object
+          properties:
+            state:
+              type: string
+              enum: [device, recovery, sideload, fastboot, offline, unauthorized, missing]
+          required: [state]
+          additionalProperties: false
+      OUTPUT_CONTAINS:
+        args_schema:
+          type: object
+          properties:
+            command:
+              type: string
+              minLength: 1
+              pattern: '\S'
+            text:
+              type: string
+              minLength: 1
+          required: [command, text]
+          additionalProperties: false
+    evidence:
+      DIAGNOSTIC_LOGS: {}

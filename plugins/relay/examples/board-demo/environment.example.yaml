@@ -1,0 +1,55 @@
+# 配置示例，不会自动加载；请在唯一的根 environment.yaml 中配置同名资源。
+# BOARD001、COM77/78/79、camera_id 均为示例，替换为自己的实际值。
+api: gear.environment/v1
+name: single-board-demo
+devices:
+  BOARD001: {}
+plugins:
+  gear.adb:
+    config: {adb_path: adb, fastboot_path: fastboot}
+  gear.relay:
+    config:
+      controllers:
+        relay_box:
+          port: COM79
+          baudrate: 9600
+          unit_id: 1
+          poll_interval_ms: 500
+  gear.console:
+    config: {}
+  gear.camera:
+    config: {}
+resources:
+  ADB.main:
+    type: ADB
+    plugin: gear.adb
+    device: BOARD001
+    config: {}
+  POWER.kl30:
+    type: POWER
+    plugin: gear.relay
+    device: BOARD001
+    config: {controller: relay_box, channel: 1, role: KL30}
+  POWER.kl15:
+    type: POWER
+    plugin: gear.relay
+    device: BOARD001
+    config: {controller: relay_box, channel: 2, role: KL15}
+  CONSOLE.mcu:
+    type: CONSOLE
+    plugin: gear.console
+    device: BOARD001
+    config: {port: COM77, role: MCU, baudrate: 115200, encoding: utf-8, line_ending: LF}
+  CONSOLE.soc:
+    type: CONSOLE
+    plugin: gear.console
+    device: BOARD001
+    config: {port: COM78, role: SOC, baudrate: 115200, encoding: utf-8, line_ending: LF}
+  SCREEN.center:
+    type: SCREEN
+    plugin: gear.camera
+    device: BOARD001
+    config:
+      camera_id: "64656d6f2d63616d657261" # 示例ID；实际请在摄像头页面刷新/选择输入
+      role: 中控屏
+      roi: {x: 0.1, y: 0.1, width: 0.8, height: 0.8}

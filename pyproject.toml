@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gear-framework"
+version = "1.0.0"
+description = "GEAR v1 deterministic plugin execution framework"
+requires-python = ">=3.11"
+dependencies = ["gear-contracts==1.0.0", "ruamel.yaml>=0.18,<0.20", "jsonschema>=4.23,<5"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+gui = ["PySide6>=6.8,<7"]
+
+[project.scripts]
+gear = "gear_framework.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "doc/contracts"]
+testpaths = ["tests"]

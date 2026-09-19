@@ -1,0 +1,5 @@
+api: gear.project/v1
+name: USB_ADB
+resources:
+  ADB.main:
+    type: ADB

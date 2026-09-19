@@ -1,0 +1,56 @@
+# 验证模式的完整四插件台架：不需要任何真实硬件。
+# 继电器 CH1 = KL30、CH2 = KL15；上电后单板按 --boot-delay 启动，
+# 启动完成才会有 ADB、串口输出和屏幕画面。
+api: gear.environment/v1
+name: verify-bench
+devices:
+  BOARD001: {}
+plugins:
+  gear.adb:
+    config: {adb_path: adb, fastboot_path: fastboot}
+  gear.relay:
+    config:
+      controllers:
+        relay_box:
+          port: COM79
+          baudrate: 9600
+          unit_id: 1
+          poll_interval_ms: 500
+  gear.console:
+    config: {}
+  gear.camera:
+    config: {}
+resources:
+  ADB.main:
+    type: ADB
+    plugin: gear.adb
+    device: BOARD001
+    config: {}
+  POWER.kl30:
+    type: POWER
+    plugin: gear.relay
+    device: BOARD001
+    config: {controller: relay_box, channel: 1, role: KL30}
+  POWER.kl15:
+    type: POWER
+    plugin: gear.relay
+    device: BOARD001
+    config: {controller: relay_box, channel: 2, role: KL15}
+  CONSOLE.mcu:
+    type: CONSOLE
+    plugin: gear.console
+    device: BOARD001
+    config: {port: COM77, role: MCU, baudrate: 115200, encoding: utf-8, line_ending: LF}
+  CONSOLE.soc:
+    type: CONSOLE
+    plugin: gear.console
+    device: BOARD001
+    config: {port: COM78, role: SOC, baudrate: 115200, encoding: utf-8, line_ending: LF}
+  SCREEN.center:
+    type: SCREEN
+    plugin: gear.camera
+    device: BOARD001
+    config:
+      camera_id: "sim-center"
+      role: 中控屏
+      roi: {x: 0.1, y: 0.1, width: 0.8, height: 0.8}

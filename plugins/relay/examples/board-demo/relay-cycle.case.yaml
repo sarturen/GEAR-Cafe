@@ -1,0 +1,17 @@
+api: gear.dsl/v1
+name: kl30-relay-cycle
+description: 仅控制标记为 KL30 的继电器通道，吸合与释放各保持1秒，重复3次；不推断通断电效果。
+body:
+  - repeat:
+      count: 3
+      steps:
+        - do: {resource: POWER.kl30, operation: ON}
+        - assert:
+            all:
+              - {resource: POWER.kl30, condition: IS_ON}
+        - wait: {duration: 1s}
+        - do: {resource: POWER.kl30, operation: OFF}
+        - assert:
+            all:
+              - {resource: POWER.kl30, condition: IS_OFF}
+        - wait: {duration: 1s}

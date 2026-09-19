@@ -1,0 +1,20 @@
+# 仅示例：不要把它当作第二个环境文件。
+# device 必须选择宿主登记的 ADB 设备号；COM77 是示例，请替换。
+plugin:
+  id: gear.console
+  config:
+    shortcuts: []
+resources:
+  CONSOLE.mcu:
+    type: CONSOLE
+    device: ADB_SERIAL_FROM_HOST
+    config:
+      port: COM77
+      role: MCU
+      baudrate: 115200
+      parity: N
+      stopbits: 1
+      data_bits: 8
+      encoding: utf-8
+      line_ending: LF
+# 未安装 SOC 时不创建 CONSOLE.soc 占位。

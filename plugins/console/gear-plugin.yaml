@@ -1,0 +1,27 @@
+api: gear.plugin/v1
+id: gear.console
+version: 1.0.0
+entrypoints:
+  runtime: gear_console.runtime:create_plugin
+  workspace: gear_console.workspace:create_workspace
+resource_types:
+  CONSOLE:
+    operations:
+      SEND:
+        args_schema:
+          type: object
+          required: [command]
+          additionalProperties: false
+          properties:
+            command: {type: string, minLength: 1, maxLength: 65536}
+    conditions:
+      OUTPUT_CONTAINS:
+        args_schema:
+          type: object
+          required: [text]
+          additionalProperties: false
+          properties:
+            text: {type: string, minLength: 1, maxLength: 65536}
+      CONNECTED: {}
+    evidence:
+      TRANSCRIPT: {}

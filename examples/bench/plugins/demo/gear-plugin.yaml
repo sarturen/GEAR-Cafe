@@ -1,0 +1,14 @@
+api: gear.plugin/v1
+id: gear.demo
+version: 1.0.0
+entrypoints:
+  runtime: gear_demo.runtime:create_plugin
+resource_types:
+  DEMO:
+    operations:
+      ON: {}
+      OFF: {}
+    conditions:
+      IS_ON: {}
+    evidence:
+      STATE: {}

@@ -1,0 +1,15 @@
+api: gear.plugin/v1
+id: gear.relay
+version: 1.0.0
+entrypoints:
+  runtime: gear_relay.runtime:create_plugin
+  workspace: gear_relay.workspace:create_workspace
+resource_types:
+  POWER:
+    operations:
+      ON: {}
+      OFF: {}
+    conditions:
+      IS_ON: {}
+      IS_OFF: {}
+    evidence: {}
