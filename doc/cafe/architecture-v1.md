@@ -54,7 +54,7 @@ execution after GUI exit are not required.
 - [Plugin v1](./plugin-contract/v1.md)
 - [Project and Environment v1](./environment-model/v1.md)
 - [Framework Runtime v1](./framework-runtime/v1.md)
-- [Shared Python contract package](./contracts/README.md)
+- [Shared Python contract package](../contracts/README.md)
 - [Confirmed revision decisions](./contract-decisions.md)
 
 The `gear_contracts` package fixes exact types, interfaces, contexts and errors.

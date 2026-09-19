@@ -103,7 +103,7 @@ uncovered targets
 ```
 
 Exact fields are defined by `RunReport` in
-[gear_contracts.data](../contracts/gear_contracts/data.py), with event/report
+[gear_contracts.data](../../contracts/gear_contracts/data.py), with event/report
 semantics in [Runtime v1](../framework-runtime/v1.md). No configuration hash or
 revision-coordination mechanism is required.
 

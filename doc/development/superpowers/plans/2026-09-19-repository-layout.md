@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.11+, pytest, PySide6, Markdown, PowerShell/Windows batch, Git.
 
-**Spec:** `docs/superpowers/specs/2026-09-19-repository-layout-design.md`
+**Spec:** `doc/development/superpowers/specs/2026-09-19-repository-layout-design.md`
 
 ## Global Constraints
 

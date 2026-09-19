@@ -4,7 +4,7 @@ Status: **Summary; Runtime v1 is normative**
 Date: 2026-09-18
 
 See [Runtime v1](./v1.md), [Architecture v1](../architecture-v1.md) and the
-[shared contract package](../contracts/README.md) for precise behavior and types.
+[shared contract package](../../contracts/README.md) for precise behavior and types.
 
 ## Accepted model
 

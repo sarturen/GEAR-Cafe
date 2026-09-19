@@ -59,7 +59,7 @@ You can also launch directly with known files:
 
 The first environment has no devices or resources. To run the ADB example, configure the ADB executable, register a USB serial and create the `ADB.main` resource binding in the Workspace. Case/project arguments are optional and can be selected in the main window.
 The desktop presents Preflight before enabling confirmation, shows diagnostics and report paths, and waits cooperatively for in-flight work when closing.
-See the [base GUI and startup decisions](docs/desktop-status.md), [ADB implementation record](docs/adb-status.md), and [failure evidence configuration](docs/images/adb-evidence.png).
+See the [base GUI and startup decisions](doc/development/desktop-status.md), [ADB implementation record](doc/development/adb-status.md), and [failure evidence configuration](doc/development/images/adb-evidence.png).
 
 A GUI shell supplies a dispatcher that posts a zero-argument callback to its GUI thread.
 Create contexts and Workspaces on that thread:
@@ -84,7 +84,7 @@ Physical COM/camera/relay plugins are not implemented.
 
 ## Plugin development
 
-Copy one plugin directory beneath `<app-dir>/plugins/` and restart. See [Plugin v1](doc/plugin-contract/v1.md) and the example.
+Copy one plugin directory beneath `<app-dir>/plugins/` and restart. See [Plugin v1](doc/cafe/plugin-contract/v1.md) and the example.
 Runtime imports, factories and configure must not open/probe hardware. Preflight never tests availability.
 The plugin's Runtime and Workspace share the same private long-lived service; begin_run/end_run isolate only execution state.
 No cross-plugin calls, automatic reconnection or queued Runs are provided.
