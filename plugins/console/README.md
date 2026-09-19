@@ -16,7 +16,7 @@
 
 界面示例（全部为模拟串口数据）：
 
-![串口 Workspace](docs/images/console-workspace.png)
+![串口 Workspace](../../doc/plugins/console/images/console-workspace.png)
 
 ## 私有配置
 
@@ -78,4 +78,4 @@ $env:BLACK_CACHE_DIR = $env:TEMP
 
 测试通过 WinDLL guard 阻止实际串口 API，使用假串口和真实 Qt。模拟 Framework 测试允许宿主命名互斥锁 API，仍拒绝 CreateFile/ReadFile/WriteFile 及串口配置 API。所有临时应用、环境和报告均在本插件 `.test-tmp` 内。
 
-详见 [实现报告](docs/implementation-report.md)。尚未做 CH340 真机、驱动稳定性和长期高吞吐验证；本次没有访问任何实际 COM（包括 COM3）。
+详见 [实现报告](../../doc/plugins/console/implementation-report.md)。尚未做 CH340 真机、驱动稳定性和长期高吞吐验证；本次没有访问任何实际 COM（包括 COM3）。

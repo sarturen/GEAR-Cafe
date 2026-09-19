@@ -1,6 +1,6 @@
 # GEAR 八路继电器插件
 
-2026-09-19，按用户确认的 [单板与资源业务约定](../adb/docs/board-resources.md) 重构。实现与模拟验证限定在本插件目录；没有扫描、探测或打开任何真实 COM 口，COM3 与本任务无关。
+2026-09-19，按用户确认的 [单板与资源业务约定](../../doc/plugins/adb/board-resources.md) 重构。实现与模拟验证限定在本插件目录；没有扫描、探测或打开任何真实 COM 口，COM3 与本任务无关。
 
 ## 业务与身份
 
@@ -97,7 +97,7 @@ resources:
 - `workspace.py`：Qt 物理页面；私有 `resource_statuses() -> dict[rid, str]` 只读取缓存，`select_resource(rid)` 只定位导航。
 - `serial_win32.py`：标准库 Windows COM 适配，没有安装新依赖。Runtime 不导入 Qt。
 
-详见 [实现报告](docs/implementation-report.md) 与 [GUI 说明](docs/gui-layout.md)。本次模拟测试覆盖真实串口 API 禁用、协议异常/超时/停止、多个控制器、归档绑定、运行中轮询与 Qt 行为；尚无实机验收。协议仍沿用已批准的 [Modbus 应用协议](https://modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf) 与 [串行规范](https://modbus.org/docs/Modbus_over_serial_line_V1_02.pdf) 映射，本次未扩展协议。
+详见 [实现报告](../../doc/plugins/relay/implementation-report.md) 与 [GUI 说明](../../doc/plugins/relay/gui-layout.md)。本次模拟测试覆盖真实串口 API 禁用、协议异常/超时/停止、多个控制器、归档绑定、运行中轮询与 Qt 行为；尚无实机验收。协议仍沿用已批准的 [Modbus 应用协议](https://modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf) 与 [串行规范](https://modbus.org/docs/Modbus_over_serial_line_V1_02.pdf) 映射，本次未扩展协议。
 
 从 `framework-dev` 运行，测试临时文件保持在插件内：
 

@@ -1,6 +1,6 @@
 # 继电器重构实现报告
 
-日期：2026-09-19。依据用户确认的 [单板与资源业务约定](../../adb/docs/board-resources.md)，只修改 `plugins/relay/**`。未修改 Framework 核心、DSL、公共合约、根 tests、根 environment、其他插件或 Git 元数据；未安装依赖、未提交 Git、未扫描或访问硬件。
+日期：2026-09-19。依据用户确认的 [单板与资源业务约定](../adb/board-resources.md)，只修改 `plugins/relay/**`。未修改 Framework 核心、DSL、公共合约、根 tests、根 environment、其他插件或 Git 元数据；未安装依赖、未提交 Git、未扫描或访问硬件。
 
 ## 完成内容
 

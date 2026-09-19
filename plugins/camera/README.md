@@ -82,3 +82,5 @@ Qt 使用依据：[QMediaDevices](https://doc.qt.io/qtforpython-6/PySide6/QtMult
 联调脚本复制四插件生产文件到插件目录内的临时应用，使用真实 Framework、GUI 和报告流程，但所有硬件边界替换为模拟实现。脚本显示 COM77/78/79 仅作为模拟配置，不访问任何 COM；截图中的画面也是合成图像。
 
 尚未做真实摄像头、六路并发吞吐及设备拔插验收；需现场按实际 USB 带宽/驱动确认。本版不承诺实时检测延迟或图像分析准确率。
+
+详细交付范围与模拟验证结果见 [实现报告](../../doc/plugins/camera/implementation-report.md)。

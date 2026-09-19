@@ -16,4 +16,4 @@
 
 ![展开资源绑定](images/relay-binding.png)
 
-资源如何配置、用例如何引用，见 [完整 Demo](../examples/board-demo/README.md)。
+资源如何配置、用例如何引用，见 [完整 Demo](../../../plugins/relay/examples/board-demo/README.md)。

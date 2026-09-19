@@ -1,6 +1,6 @@
 # ADB USB 插件
 
-业务身份及跨插件资源归属以 [2026-09-19 业务约定](docs/board-resources.md) 为准。设备号在 ADB / fastboot 间保持不变，作为现有 devices 登记与资源顶层 device 的唯一主键。每块单板最多一个 ADB 资源；旧重复绑定会显示 ADB_DEVICE_DUPLICATE，保留原数据供人工修正。
+业务身份及跨插件资源归属以 [2026-09-19 业务约定](../../doc/plugins/adb/board-resources.md) 为准。设备号在 ADB / fastboot 间保持不变，作为现有 devices 登记与资源顶层 device 的唯一主键。每块单板最多一个 ADB 资源；旧重复绑定会显示 ADB_DEVICE_DUPLICATE，保留原数据供人工修正。
 
 插件 ID：`gear.adb`；资源类型：`ADB`。通过 GEAR v1 合约装载，Runtime 不依赖 Qt 或 Framework 内部代码。
 

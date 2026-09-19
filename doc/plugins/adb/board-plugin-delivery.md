@@ -32,7 +32,7 @@
 - ADB 插件测试：**59 passed**。
 - 继电器插件测试：**152 passed**。
 - 摄像头及新增总 GUI 测试：**31 passed**。
-- 串口插件测试：**92 passed**，含断开/故障后 COM 重新分配、同长度新日志及清屏游标的审查回归，见 [串口实施报告](../../console/docs/implementation-report.md)。
+- 串口插件测试：**92 passed**，含断开/故障后 COM 重新分配、同长度新日志及清屏游标的审查回归，见 [串口实施报告](../console/implementation-report.md)。
 - 上述 pytest 合计 **475 项全部通过**，由主任务在最终代码上分别执行确认。
 - 四插件真实 Framework + Qt 联调：构造/预检不触发 I/O；取消一次预检；预先打开共享会话；连续 **2 PASS + 1 预期 FAIL**；失败报告包含相机图片/ROI 和串口记录；用例间连接保持，退出全部关闭。
 - 生产模块按 Python 3.11 AST 解析通过。git diff --check 通过；根目录变更仅获准的 desktop.py。
@@ -58,9 +58,9 @@ Fastboot 必须配置工具路径。为保证 USB-only，发现前只读检查�
 ## 资料
 
 - [ADB](implementation-report.md)
-- [继电器](../../relay/docs/implementation-report.md)
-- [串口](../../console/docs/implementation-report.md)
-- [摄像头](../../camera/README.md)
+- [继电器](../relay/implementation-report.md)
+- [串口](../console/implementation-report.md)
+- [摄像头](../../../plugins/camera/README.md)
 
 以下截图来自模拟验收，画面和设备均为假数据：
 

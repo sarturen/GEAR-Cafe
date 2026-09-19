@@ -6,7 +6,7 @@
 
 新增代码、manifest、测试、文档与示例均位于 `plugins/console/`。没有修改 Framework、DSL、公共合约、根环境文件、根测试、其他插件或 Git 元数据。未安装依赖，未操作任何真实 COM 口，未创建单板或资源占位。
 
-实现遵循 `doc/plugin-contract/v1.md`、`gear_contracts` 的精确接口与 `plugins/adb/docs/board-resources.md` 的业务约定。运行时不依赖 Qt，GUI 只通过本插件服务及 WorkspaceContext 工作。
+实现遵循 [Plugin v1](../../cafe/plugin-contract/v1.md)、`gear_contracts` 的精确接口与 [单板资源约定](../adb/board-resources.md)。运行时不依赖 Qt，GUI 只通过本插件服务及 WorkspaceContext 工作。
 
 ## 核心实现
 

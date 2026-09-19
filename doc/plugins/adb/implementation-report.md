@@ -24,9 +24,9 @@
 - `README.md`
 - 新增 `.gitignore`，忽略本插件测试临时目录与 Python/pytest 缓存
 - 新增 `tests/conftest.py`、`tests/test_board_modes.py`、`tests/test_board_workspace.py`
-- 新增本报告 `docs/implementation-report.md`
+- 新增本报告 `doc/plugins/adb/implementation-report.md`
 
-原有 `docs/board-resources.md` 和主任务实施计划未修改。
+原有 `doc/plugins/adb/board-resources.md` 和主任务实施计划未修改。
 
 ## 验证
 
