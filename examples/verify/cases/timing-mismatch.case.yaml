@@ -1,0 +1,19 @@
+api: gear.dsl/v1
+name: verify-boot-timing-mismatch
+description: >-
+  这条用例故意假定“上电后 1 秒内 ADB 就可用”。真实单板有启动时间，验证模式按
+  --boot-delay 复现，所以它会超时失败。这就是验证模式的用法：把用例里的时序和
+  前置条件假设放到台架上跑一遍，先于现场暴露问题。把 within 放大到启动时间以上
+  即可通过。
+setup:
+  - do: {resource: POWER.kl30, operation: ON}
+  - do: {resource: POWER.kl15, operation: OFF}
+body:
+  - do: {resource: POWER.kl15, operation: ON}
+  - assert:
+      all:
+        - {resource: ADB.main, condition: AVAILABLE}
+      within: 1s
+      every: 100ms
+teardown:
+  - do: {resource: POWER.kl15, operation: ON}
