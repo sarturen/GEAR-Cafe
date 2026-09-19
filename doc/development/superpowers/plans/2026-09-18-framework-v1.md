@@ -3,7 +3,7 @@
 **Goal:** Implement the approved v1 Framework, with executable acceptance tests.
 **Architecture:** One fixed worker and long-lived plugin sessions. Core has no Qt dependency. A GUI dispatcher bridge serializes configuration/manual work; the CLI exercises the same Framework API.
 **Tech stack:** Python 3.11+, ruamel.yaml (YAML 1.2), jsonschema Draft 2020-12, pytest; standard-library concurrency, filesystem and OS locking.
-**Spec:** doc/architecture-v1.md, doc/framework-runtime/v1.md, doc/plugin-contract/v1.md, doc/dsl/v1.md, doc/environment-model/v1.md and doc/contracts/gear_contracts.
+**Spec:** doc/cafe/architecture-v1.md, doc/cafe/framework-runtime/v1.md, doc/cafe/plugin-contract/v1.md, doc/cafe/dsl/v1.md, doc/cafe/environment-model/v1.md and doc/contracts/gear_contracts.
 
 ## Constraints and decisions
 All eleven user-approved decisions remain binding. No readiness probes, overlapping Runs, per-run connection recreation, plugin-to-plugin calls, recovery, task queue or background daemon. All plugin runtime calls use the same worker. Passive acquisition belongs to each plugin.
@@ -53,4 +53,4 @@ Files: src/gear_framework/cli.py, __main__.py, examples/, README.md, tests/test_
 - [x] Run all tests and packaging/import checks; review contract conformance, fix concrete issues, record delivery limits.
 
 ## Progress
-All five tasks completed. Implementation and contract review were performed by the parent after child tasks could not start because of usage limits. Validation: 47 pytest cases passed, both packages installed and wheels built, installed CLI demo PASS with explicit coverage gap. See docs/implementation-status.md for evidence and limits.
+All five tasks completed. Implementation and contract review were performed by the parent after child tasks could not start because of usage limits. Validation: 47 pytest cases passed, both packages installed and wheels built, installed CLI demo PASS with explicit coverage gap. See doc/development/implementation-status.md for evidence and limits.

@@ -31,7 +31,10 @@ def main(argv=None):
             return run_gui(args.app_dir, case=args.case, project=args.project)
         except ModuleNotFoundError as exc:
             if exc.name == "PySide6":
-                print("GEAR GUI requires: pip install 'gear-framework[gui]'", file=sys.stderr)
+                print(
+                    "GEAR GUI requires: pip install 'gear-framework[gui]'",
+                    file=sys.stderr,
+                )
             else:
                 print(f"GEAR: {exc}", file=sys.stderr)
             return 3

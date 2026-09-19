@@ -22,7 +22,7 @@ USB only. Preflight checks configuration only. Full Run exclusivity. No automati
 - [x] Workspace: create workspace.py and tests/test_adb_workspace.py. Use real offscreen widgets; check complete slice commits, manual operation submission, ACTIVE control disabling, persistence of missing identities, log display and dispose behavior.
 - [x] GUI host: add desktop.py, gear gui CLI and optional GUI dependency. Test plugin discovery/hosting, GUI-thread dispatch, run confirmation and cooperative close.
 - [x] Integrate: add example environment/project/case and plugin README; verify real Registry/Framework with fake transport and two Runs, no Qt import for runtime, full pytest, packaging and screenshot.
-- [x] Record results and limitations in docs/adb-status.md; 138 tests pass, GUI screenshots checked, Framework wheel built.
+- [x] Record results and limitations in doc/development/adb-status.md; 138 tests pass, GUI screenshots checked, Framework wheel built.
 - [x] Complete remaining approved software capabilities and review; real-device acceptance remains explicitly unverified because no USB device is attached.
 
 ## Internal interfaces
