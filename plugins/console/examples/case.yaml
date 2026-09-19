@@ -1,0 +1,20 @@
+# 请将命令和预期文本替换为用户确定的值；这不是车机命令建议。
+api: gear.dsl/v1
+name: console-user-command
+body:
+  - do:
+      resource: CONSOLE.mcu
+      operation: SEND
+      args:
+        command: USER_DEFINED_COMMAND
+  - assert:
+      all:
+        - resource: CONSOLE.mcu
+          condition: OUTPUT_CONTAINS
+          args:
+            text: USER_EXPECTED_TEXT
+      within: 5s
+      every: 100ms
+evidence_on_fail:
+  - resource: CONSOLE.mcu
+    evidence: TRANSCRIPT

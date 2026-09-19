@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime
+import shlex
 
 from gear_contracts.api import GearError
 from PySide6.QtCore import QSignalBlocker, QTimer, Qt
@@ -38,6 +39,8 @@ class AdbWorkspace:
         self._active = context.run_state() == "ACTIVE"
         self._discovered = []
         self._refreshed = False
+        self._cache_revision = None
+        self._last_output = None
         self._selected_binding = None
         self._controls = []
         self.widget = QWidget()
@@ -71,11 +74,14 @@ class AdbWorkspace:
         layout.addWidget(self.tabs, 1)
         self._build_devices()
         self._build_shell()
+        self._build_fastboot()
         self._build_pull()
         self._build_logcat()
         self._build_evidence()
 
-        self.status_label = QLabel("配置编辑后即时保存；设备状态以最近一次刷新为准。")
+        self.status_label = QLabel(
+            "配置即时保存；状态为最近观察值。点击开始观察后每秒更新，用例期间继续。"
+        )
         self.status_label.setObjectName("status_label")
         self.status_label.setWordWrap(True)
         self.status_label.setTextFormat(Qt.TextFormat.PlainText)
@@ -89,8 +95,8 @@ class AdbWorkspace:
         ]
         self.log_timer = QTimer(self.widget)
         self.log_timer.setInterval(300)
-        self.log_timer.timeout.connect(self._update_log)
-        self.target_device.currentIndexChanged.connect(self._update_log)
+        self.log_timer.timeout.connect(self._update_cached)
+        self.target_device.currentIndexChanged.connect(self._update_cached)
         self._reload()
         self._update_controls()
         self.log_timer.start()
@@ -145,13 +151,28 @@ class AdbWorkspace:
         self.adb_path = self._edit("adb_path", "adb 或 adb.exe 的完整路径")
         self.adb_path.editingFinished.connect(self._save_adb_path)
         settings.addRow("ADB 程序", self.adb_path)
+        self.fastboot_path = self._edit(
+            "fastboot_path", "可选：fastboot 或完整路径；空白表示查询不可用"
+        )
+        self.fastboot_path.editingFinished.connect(self._save_fastboot_path)
+        settings.addRow("Fastboot 程序", self.fastboot_path)
         layout.addLayout(settings)
         refresh_row = QHBoxLayout()
         self.refresh_button = self._button(
             "刷新 USB 设备", "refresh_button", self._refresh
         )
         refresh_row.addWidget(self.refresh_button)
+        self.monitor_start_button = self._button(
+            "开始观察", "monitor_start_button", self._start_monitor
+        )
+        self.monitor_stop_button = self._button(
+            "停止观察", "monitor_stop_button", self._stop_monitor
+        )
+        refresh_row.addWidget(self.monitor_start_button)
+        refresh_row.addWidget(self.monitor_stop_button)
         self.refresh_label = QLabel("尚未刷新")
+        self.refresh_label.setWordWrap(True)
+        self.refresh_label.setTextFormat(Qt.TextFormat.PlainText)
         refresh_row.addWidget(self.refresh_label, 1)
         layout.addLayout(refresh_row)
         self.device_table = self._table(
@@ -226,6 +247,26 @@ class AdbWorkspace:
         layout.addWidget(self.shell_result)
         self.shell_output = self._output("shell_output")
         layout.addWidget(self.shell_output, 1)
+
+    def _build_fastboot(self):
+        layout = self._tab("Fastboot")
+        hint = QLabel(
+            "输入 USB 单板的 fastboot 子命令及参数，例如 getvar product。设备号由所选单板固定；不支持全局选项。默认超时 30 秒。"
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+        row = QHBoxLayout()
+        self.fastboot_command = self._edit(
+            "fastboot_command", "getvar product；含空格参数可用双引号"
+        )
+        row.addWidget(self.fastboot_command, 1)
+        self.fastboot_button = self._button("执行", "fastboot_button", self._fastboot)
+        row.addWidget(self.fastboot_button)
+        layout.addLayout(row)
+        self.fastboot_result = QLabel("尚未执行")
+        layout.addWidget(self.fastboot_result)
+        self.fastboot_output = self._output("fastboot_output")
+        layout.addWidget(self.fastboot_output, 1)
 
     def _build_pull(self):
         layout = self._tab("文件拉取")
@@ -398,6 +439,9 @@ class AdbWorkspace:
             self._show_error(exc)
             return
         self.adb_path.setText(str(data["plugin"]["config"].get("adb_path", "adb")))
+        self.fastboot_path.setText(
+            str(data["plugin"]["config"].get("fastboot_path", ""))
+        )
         registered = data.get("devices", {})
         self._render_devices(registered)
         self._set_options(
@@ -459,7 +503,11 @@ class AdbWorkspace:
             ):
                 values = [
                     record["serial"],
-                    record["state"],
+                    (
+                        self._device_status_text(record["serial"])
+                        if hasattr(self.runtime, "device_status")
+                        else record["state"]
+                    ),
                     "已登记" if record["serial"] in registered else "未登记",
                     " / ".join(
                         value
@@ -496,6 +544,10 @@ class AdbWorkspace:
     def _save_adb_path(self):
         value = self.adb_path.text().strip() or "adb"
         self._commit(lambda data: data["plugin"]["config"].update(adb_path=value))
+
+    def _save_fastboot_path(self):
+        value = self.fastboot_path.text().strip()
+        self._commit(lambda data: data["plugin"]["config"].update(fastboot_path=value))
 
     def _register(self):
         serial = self.serial_input.text().strip()
@@ -607,8 +659,99 @@ class AdbWorkspace:
                 "最近刷新：" + datetime.now().strftime("%H:%M:%S")
             )
             self._reload()
+            self._update_cached()
 
         self._manual(self.runtime.refresh_devices, completed)
+
+    def _start_monitor(self):
+        self._manual(self.runtime.start_monitor, lambda _: self._update_cached())
+
+    def _stop_monitor(self):
+        self._manual(self.runtime.stop_monitor, lambda _: self._update_cached())
+
+    def _device_status_text(self, serial):
+        observation = self.runtime.device_status(serial)
+        error = observation["diagnostic"]
+        return observation["state"] + (" · " + error["code"] if error else "")
+
+    def resource_statuses(self):
+        """Host overview hook: detached configuration and synchronized cache only."""
+        data = self.context.current_slice()
+        counts = {}
+        for record in data["resources"].values():
+            serial = record.get("device")
+            counts[serial] = counts.get(serial, 0) + 1
+        statuses = {}
+        for rid, record in data["resources"].items():
+            serial = record.get("device")
+            if not serial:
+                statuses[rid] = "未配置"
+            elif counts[serial] > 1:
+                statuses[rid] = "配置无效 · ADB_DEVICE_DUPLICATE"
+            elif serial not in data.get("devices", {}):
+                statuses[rid] = "配置无效 · ADB_DEVICE_UNKNOWN"
+            else:
+                statuses[rid] = self._device_status_text(serial)
+        return statuses
+
+    def select_resource(self, resource_id):
+        """Host overview hook: select the saved binding without a device query."""
+        for row in range(self.binding_table.rowCount()):
+            if self.binding_table.item(row, 0).text() == resource_id:
+                self.tabs.setCurrentIndex(0)
+                self.binding_table.selectRow(row)
+                self.target_device.setCurrentText(
+                    self.binding_table.item(row, 1).text()
+                )
+                self.binding_table.scrollToItem(self.binding_table.item(row, 0))
+                return
+
+    def _update_cached(self, *_):
+        if self._disposed:
+            return
+        self._update_log()
+        if not hasattr(self.runtime, "device_snapshot"):
+            return
+        snapshot = self.runtime.device_snapshot()
+        if snapshot["revision"] != self._cache_revision:
+            self._cache_revision = snapshot["revision"]
+            self._discovered = snapshot["records"]
+            data = self.context.current_slice()
+            self._render_devices(data.get("devices", {}))
+            self._set_options(
+                self.target_device,
+                sorted(
+                    set(data.get("devices", {}))
+                    | {item["serial"] for item in self._discovered}
+                ),
+            )
+        summaries = []
+        for tool, query in snapshot["queries"].items():
+            error = query["diagnostic"]
+            summaries.append(
+                tool
+                + ": "
+                + (
+                    error["code"] + " · " + error["message"]
+                    if error
+                    else query["status"]
+                )
+            )
+        self.refresh_label.setText(
+            ("观察中 · " if snapshot["monitoring"] else "缓存 · ")
+            + "；".join(summaries)
+        )
+        output = snapshot["outputs"].get(self.target_device.currentText())
+        key = (self.target_device.currentText(), output)
+        if output and key != self._last_output:
+            self._last_output = key
+            controls = {
+                "SHELL": (self.shell_result, self.shell_output),
+                "FASTBOOT": (self.fastboot_result, self.fastboot_output),
+                "PULL": (self.pull_result, self.pull_output),
+            }
+            if output["kind"] in controls:
+                self._show_command_result(output, *controls[output["kind"]])
 
     def _target(self):
         serial = self.target_device.currentText()
@@ -634,6 +777,29 @@ class AdbWorkspace:
                 lambda: self.runtime.manual_shell(serial, command),
                 lambda value: self._show_command_result(
                     value, self.shell_result, self.shell_output
+                ),
+            )
+
+    def _fastboot(self):
+        serial = self._target()
+        try:
+            # POSIX quote grouping with escaping disabled preserves Windows paths.
+            lexer = shlex.shlex(self.fastboot_command.text(), posix=True)
+            lexer.whitespace_split = True
+            lexer.escape = ""
+            lexer.commenters = ""
+            arguments = list(lexer)
+        except ValueError as exc:
+            self.status_label.setText("参数引号不完整：" + str(exc))
+            return
+        if not arguments:
+            self.status_label.setText("请输入 fastboot 子命令。")
+            return
+        if serial:
+            self._manual(
+                lambda: self.runtime.manual_fastboot(serial, arguments),
+                lambda result: self._show_command_result(
+                    result, self.fastboot_result, self.fastboot_output
                 ),
             )
 

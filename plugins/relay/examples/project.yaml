@@ -1,0 +1,5 @@
+api: gear.project/v1
+name: relay-bench
+resources:
+  POWER.main:
+    type: POWER

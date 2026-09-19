@@ -1,0 +1,5 @@
+api: gear.project/v1
+name: console-example
+resources:
+  CONSOLE.mcu:
+    type: CONSOLE

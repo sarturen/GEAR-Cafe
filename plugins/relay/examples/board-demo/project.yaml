@@ -1,0 +1,9 @@
+api: gear.project/v1
+name: single-board-demo
+resources:
+  ADB.main: {type: ADB}
+  POWER.kl30: {type: POWER}
+  POWER.kl15: {type: POWER}
+  CONSOLE.mcu: {type: CONSOLE}
+  CONSOLE.soc: {type: CONSOLE}
+  SCREEN.center: {type: SCREEN}

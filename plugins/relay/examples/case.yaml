@@ -1,0 +1,14 @@
+api: gear.dsl/v1
+name: relay-cycle
+body:
+  - do:
+      resource: POWER.main
+      operation: ON
+  - assert:
+      all:
+        - resource: POWER.main
+          condition: IS_ON
+teardown:
+  - do:
+      resource: POWER.main
+      operation: OFF

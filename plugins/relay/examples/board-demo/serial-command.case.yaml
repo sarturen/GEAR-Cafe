@@ -1,0 +1,17 @@
+api: gear.dsl/v1
+name: mcu-command-demo
+description: 运行前必须替换示例命令与期望输出，不假定任何厂商MCU命令。
+body:
+  - do:
+      resource: CONSOLE.mcu
+      operation: SEND
+      args: {command: "REPLACE_WITH_MCU_COMMAND"}
+  - assert:
+      all:
+        - resource: CONSOLE.mcu
+          condition: OUTPUT_CONTAINS
+          args: {text: "REPLACE_WITH_EXPECTED_OUTPUT"}
+      within: 3s
+      every: 100ms
+evidence_on_fail:
+  - {resource: CONSOLE.mcu, evidence: TRANSCRIPT}

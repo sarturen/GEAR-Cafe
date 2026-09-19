@@ -28,6 +28,13 @@ class AdbRuntime:
         # Saving unfinished configuration is allowed. Its use fails explicitly.
         if isinstance(path, str) and path.strip() and "\0" not in path:
             self.service.configure(path)
+        fastboot_path = plugin_slice["plugin"]["config"].get("fastboot_path", "")
+        if (
+            isinstance(fastboot_path, str)
+            and "\0" not in fastboot_path
+            and hasattr(self.service, "configure_fastboot")
+        ):
+            self.service.configure_fastboot(fastboot_path.strip())
 
     def validate_config(self, plugin_slice):
         return validate_slice(plugin_slice)
@@ -62,16 +69,43 @@ class AdbRuntime:
             first = report["diagnostics"][0]
             raise GearError(first["code"], first["message"])
 
-    def refresh_devices(self):
+    def _manual_guard(self):
+        if self._binding is not None:
+            raise GearError("BUSY", "用例运行期间禁止手动操作。")
         self._tool_config()
-        return self.service.discover()
+
+    def refresh_devices(self):
+        self._manual_guard()
+        return self.service.refresh_devices()
+
+    def device_snapshot(self):
+        return self.service.device_snapshot()
+
+    def device_status(self, serial):
+        return self.service.device_status(serial)
+
+    def start_monitor(self):
+        self._manual_guard()
+        self.service.start_monitor()
+        return self.device_snapshot()
+
+    def stop_monitor(self):
+        self._manual_guard()
+        self.service.stop_monitor()
+        return self.device_snapshot()
+
+    def manual_fastboot(self, serial, arguments, timeout_s=30):
+        self._manual_guard()
+        return self.service.fastboot(serial, arguments, timeout_s)
 
     def manual_shell(self, serial, command):
-        self._tool_config()
+        self._manual_guard()
+        self._check_args("SHELL", {"command": command})
         return self.service.shell(serial, command)
 
     def manual_pull(self, serial, remote_path, destination):
-        self._tool_config()
+        self._manual_guard()
+        self._check_args("PULL", {"remote_path": remote_path})
         try:
             Path(destination).mkdir(parents=True, exist_ok=True)
         except OSError as exc:
@@ -79,21 +113,70 @@ class AdbRuntime:
         return self.service.pull(serial, remote_path, destination)
 
     def start_logcat(self, serial, destination):
-        self._tool_config()
+        self._manual_guard()
         return self.service.start_logcat(serial, destination)
 
     def stop_logcat(self, serial):
+        self._manual_guard()
         return self.service.stop_logcat(serial)
 
     def logcat_snapshot(self, serial):
         return self.service.logcat_snapshot(serial)
 
+    @staticmethod
+    def _check_args(capability, args):
+        fields = {
+            "SHELL": {"command"},
+            "PULL": {"remote_path"},
+            "FASTBOOT": {"arguments", "timeout_s"},
+            "AVAILABLE": set(),
+            "UNAVAILABLE": set(),
+            "STATE_IS": {"state"},
+            "OUTPUT_CONTAINS": {"command", "text"},
+        }
+        if capability not in fields:
+            raise GearError("ADB_UNKNOWN_CAPABILITY", capability)
+        allowed = fields[capability]
+        required = allowed - {"timeout_s"}
+        valid = type(args) is dict and required <= set(args) <= allowed
+        if valid:
+            for field in required - {"arguments"}:
+                value = args[field]
+                valid &= (
+                    type(value) is str
+                    and bool(value if field == "text" else value.strip())
+                    and "\0" not in value
+                )
+            if capability == "PULL":
+                valid &= type(args["remote_path"]) is str and args[
+                    "remote_path"
+                ].startswith("/")
+            if capability == "STATE_IS" and valid:
+                valid &= args["state"] in {
+                    "device",
+                    "recovery",
+                    "sideload",
+                    "fastboot",
+                    "offline",
+                    "unauthorized",
+                    "missing",
+                }
+        if not valid:
+            raise GearError(
+                "ADB_ARGUMENTS_INVALID", "参数不符合 " + capability + " 的声明。"
+            )
+
     def invoke(self, resource_id, operation, args, context):
         serial = self._resource(resource_id, context)
         destination = None
         try:
+            self._check_args(operation, args)
             if operation == "SHELL":
                 result = self.service.shell(serial, args["command"])
+            elif operation == "FASTBOOT":
+                result = self.service.fastboot(
+                    serial, args["arguments"], args.get("timeout_s", 30)
+                )
             elif operation == "PULL":
                 destination = f"files/{PLUGIN_ID}/{uuid.uuid4().hex}"
                 local = Path(context.artifact_dir) / destination
@@ -118,8 +201,12 @@ class AdbRuntime:
                 None
                 if ok
                 else diagnostic(
-                    "ADB_COMMAND_FAILED",
-                    "ADB 命令执行失败。",
+                    (
+                        "FASTBOOT_COMMAND_FAILED"
+                        if operation == "FASTBOOT"
+                        else "ADB_COMMAND_FAILED"
+                    ),
+                    operation + " 命令执行失败。",
                     exit_code=result["exit_code"],
                 )
             ),
@@ -128,16 +215,46 @@ class AdbRuntime:
 
     def evaluate(self, resource_id, condition, args, context):
         serial = self._resource(resource_id, context)
-        if condition not in ("AVAILABLE", "UNAVAILABLE"):
-            raise GearError("ADB_UNKNOWN_CAPABILITY", condition)
         try:
-            matches = [
-                device
-                for device in self.service.discover()
-                if device["serial"] == serial
-            ]
-            if len(matches) > 1:
-                raise GearError("ADB_AMBIGUOUS_DEVICE", "多个 USB 设备使用相同序列号。")
+            self._check_args(condition, args)
+            if condition == "OUTPUT_CONTAINS":
+                result = self.service.shell(serial, args["command"])
+                ok = result["exit_code"] == 0
+                return {
+                    "ok": ok,
+                    "satisfied": ok and args["text"] in result["stdout"],
+                    "diagnostic": (
+                        None
+                        if ok
+                        else diagnostic("ADB_COMMAND_FAILED", "输出校验命令执行失败。")
+                    ),
+                    "details": {"serial": serial, **result},
+                }
+            if condition == "STATE_IS":
+                self.service.refresh_devices()
+                observation = self.service.device_status(serial)
+                state = observation["state"]
+                if observation["diagnostic"]:
+                    return {
+                        "ok": False,
+                        "satisfied": False,
+                        "diagnostic": observation["diagnostic"],
+                        "details": {"serial": serial, "state": state},
+                    }
+                satisfied = state == args["state"]
+            else:
+                # Preserve the original ADB-only availability semantics.
+                matches = [
+                    device
+                    for device in self.service.discover()
+                    if device["serial"] == serial
+                ]
+                if len(matches) > 1:
+                    raise GearError(
+                        "ADB_AMBIGUOUS_DEVICE", "多个 USB 设备使用相同序列号。"
+                    )
+                state = matches[0]["state"] if matches else "missing"
+                satisfied = (state == "device") == (condition == "AVAILABLE")
         except GearError as exc:
             return {
                 "ok": False,
@@ -145,11 +262,9 @@ class AdbRuntime:
                 "diagnostic": diagnostic(exc.args[0], str(exc)),
                 "details": {"serial": serial},
             }
-        state = matches[0]["state"] if matches else "missing"
-        available = state == "device"
         return {
             "ok": True,
-            "satisfied": available if condition == "AVAILABLE" else not available,
+            "satisfied": satisfied,
             "diagnostic": None,
             "details": {"serial": serial, "state": state},
         }

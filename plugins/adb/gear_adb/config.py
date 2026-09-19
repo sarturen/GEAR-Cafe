@@ -21,8 +21,12 @@ def validate_slice(plugin_slice):
         invalid |= not unfinished
 
     config = plugin_slice["plugin"]["config"]
-    if set(config) - {"adb_path"}:
-        issue("ADB_CONFIG_INVALID", "ADB 配置仅支持 adb_path。", "plugin.config")
+    if set(config) - {"adb_path", "fastboot_path"}:
+        issue(
+            "ADB_CONFIG_INVALID",
+            "ADB 配置仅支持 adb_path 和可选 fastboot_path。",
+            "plugin.config",
+        )
     path = config.get("adb_path", "adb")
     if type(path) is not str or "\0" in path:
         issue(
@@ -37,6 +41,13 @@ def validate_slice(plugin_slice):
             "plugin.config.adb_path",
             True,
         )
+    fastboot_path = config.get("fastboot_path", "")
+    if type(fastboot_path) is not str or "\0" in fastboot_path:
+        issue(
+            "ADB_CONFIG_INVALID",
+            "fastboot 路径必须为不含空字符的字符串。",
+            "plugin.config.fastboot_path",
+        )
     devices = plugin_slice.get("devices", {})
     for serial in devices:
         if not serial.strip() or any(c.isspace() or c == "\0" for c in serial):
@@ -45,6 +56,7 @@ def validate_slice(plugin_slice):
                 "设备序列号不能包含空白或空字符。",
                 "devices." + serial,
             )
+    assigned = {}
     for rid, record in plugin_slice["resources"].items():
         resource_config = record["config"]
         if set(resource_config) - {"log_paths"}:
@@ -71,12 +83,20 @@ def validate_slice(plugin_slice):
                 f"resources.{rid}.device",
                 True,
             )
+        elif serial in assigned:
+            issue(
+                "ADB_DEVICE_DUPLICATE",
+                f"单板 {serial} 已绑定到 {assigned[serial]}；每单板最多一个 ADB 资源。",
+                f"resources.{rid}.device",
+            )
         elif serial not in devices:
             issue(
                 "ADB_DEVICE_UNKNOWN",
                 "绑定的设备序列号尚未登记。",
                 f"resources.{rid}.device",
             )
+        if serial:
+            assigned.setdefault(serial, rid)
     return {
         "status": "INVALID" if invalid else "INCOMPLETE" if incomplete else "VALID",
         "diagnostics": issues,

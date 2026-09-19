@@ -15,8 +15,7 @@ from PySide6.QtWidgets import QApplication
 from gear_contracts.api import GearError
 from gear_framework.host import Framework
 
-
-WORKSPACE_CODE = '''
+WORKSPACE_CODE = """
 import threading
 from PySide6.QtWidgets import QPushButton
 
@@ -48,7 +47,7 @@ class Workspace:
 
 def create_workspace(context, runtime):
     return Workspace(context, runtime)
-'''
+"""
 
 
 @pytest.fixture(scope="module")
@@ -68,7 +67,9 @@ def wait_gui(qapp, predicate, timeout=3):
 
 def add_workspace(bench):
     package = bench["manifest"]["entrypoints"]["runtime"].split(".")[0]
-    bench["manifest"]["entrypoints"]["workspace"] = package + ".workspace:create_workspace"
+    bench["manifest"]["entrypoints"]["workspace"] = (
+        package + ".workspace:create_workspace"
+    )
     (bench["directory"] / "gear-plugin.yaml").write_text(
         json.dumps(bench["manifest"]), encoding="utf-8"
     )
@@ -106,7 +107,9 @@ def test_desktop_hosts_registered_workspace_and_dispatches_on_gui_thread(bench, 
     try:
         assert window.tabs.count() == 2
         assert window.tabs.tabText(0) == "首页"
-        assert window.tabs.tabText(1) == "gear.demo"
+        assert window.tabs.tabText(1) == "demo"
+        assert window.tabs.documentMode()
+        assert not window.tabs.tabBar().drawBase()
         workspace.widget.click()
         wait_gui(qapp, lambda: bool(workspace.results))
         assert workspace.results[0]["value"] == host._worker.thread.ident
@@ -116,6 +119,65 @@ def test_desktop_hosts_registered_workspace_and_dispatches_on_gui_thread(bench, 
         window.close()
         wait_gui(qapp, lambda: host._closed)
         assert workspace.disposed_thread == threading.get_ident()
+
+
+def test_board_selector_keeps_home_overview_in_selected_board_context(bench, qapp):
+    from gear_framework.desktop import DesktopWindow
+
+    environment = json.loads(bench["environment"].read_text(encoding="utf-8"))
+    environment["devices"] = {"BOARD-A": {}, "BOARD-B": {}}
+    environment["resources"] = {
+        "SCREEN.a": {
+            "type": "SCREEN",
+            "plugin": "gear.demo",
+            "device": "BOARD-A",
+            "config": {"role": "中控屏", "camera_id": "USB-A"},
+        },
+        "SCREEN.b": {
+            "type": "SCREEN",
+            "plugin": "gear.demo",
+            "device": "BOARD-B",
+            "config": {"role": "仪表屏", "camera_id": "USB-B"},
+        },
+    }
+    bench["environment"].write_text(json.dumps(environment), encoding="utf-8")
+    add_workspace(bench)
+    host = Framework(bench["app"], bench["environment"])
+    window = DesktopWindow(host)
+    window.show()
+    try:
+        assert [window.board_selector.itemText(i) for i in range(2)] == [
+            "BOARD-A",
+            "BOARD-B",
+        ]
+        assert window.board_title.text() == "BOARD-A"
+        assert window.resources_table.rowCount() == 1
+        assert window.resources_table.item(0, 0).text() == "BOARD-A"
+
+        window.board_selector.setCurrentIndex(1)
+        qapp.processEvents()
+
+        assert window.board_title.text() == "BOARD-B"
+        assert window.resources_table.rowCount() == 1
+        assert window.resources_table.item(0, 0).text() == "BOARD-B"
+        assert window.resources_table.item(0, 1).text() == "SCREEN.b"
+    finally:
+        window.close()
+        wait_gui(qapp, lambda: host._closed)
+
+
+def test_run_panel_is_always_visible_and_tracks_selected_case(desktop, qapp):
+    window, host, runtime, workspace = desktop
+    assert not window.run_panel.isHidden()
+    assert not hasattr(window, "run_toggle")
+    assert window.case_path.text() in window.run_case_label.toolTip()
+    assert "case.yaml" in window.run_case_label.text()
+
+    window.submit_button.click()
+    wait_gui(qapp, lambda: window.confirm_button.isEnabled())
+
+    assert not window.run_panel.isHidden()
+    assert window.result_tabs.currentWidget() is window.diagnostics
 
 
 def test_run_requires_confirmation_and_displays_report(desktop, qapp):
@@ -285,7 +347,8 @@ def test_gui_starts_without_plugins_and_creates_one_environment(
     if plugins_directory:
         (tmp_path / "plugins").mkdir()
     monkeypatch.setattr(
-        QFileDialog, "getOpenFileName",
+        QFileDialog,
+        "getOpenFileName",
         lambda *args: pytest.fail("No startup file picker is allowed"),
     )
     opened = []
@@ -293,23 +356,35 @@ def test_gui_starts_without_plugins_and_creates_one_environment(
     def close_window():
         for widget in qapp.topLevelWidgets():
             if isinstance(widget, DesktopWindow) and widget.isVisible():
-                opened.append({
-                    "environment": widget.framework.environment_path,
-                    "tabs": [widget.tabs.tabText(i) for i in range(widget.tabs.count())],
-                    "inputs": widget.case_path.isEnabled() and widget.project_path.isEnabled(),
-                    "plugins": list(widget.framework._registry.entries),
-                })
+                opened.append(
+                    {
+                        "environment": widget.framework.environment_path,
+                        "tabs": [
+                            widget.tabs.tabText(i) for i in range(widget.tabs.count())
+                        ],
+                        "inputs": widget.case_path.isEnabled()
+                        and widget.project_path.isEnabled(),
+                        "plugins": list(widget.framework._registry.entries),
+                    }
+                )
                 widget.close()
 
     QTimer.singleShot(30, close_window)
     assert main(["gui", "--app-dir", str(tmp_path)]) == 0
-    assert opened == [{
-        "environment": tmp_path / "environment.yaml",
-        "tabs": ["首页"], "inputs": True, "plugins": [],
-    }]
+    assert opened == [
+        {
+            "environment": tmp_path / "environment.yaml",
+            "tabs": ["首页"],
+            "inputs": True,
+            "plugins": [],
+        }
+    ]
     assert load_yaml(tmp_path / "environment.yaml") == {
-        "api": "gear.environment/v1", "name": "GEAR",
-        "plugins": {}, "resources": {}, "devices": {},
+        "api": "gear.environment/v1",
+        "name": "GEAR",
+        "plugins": {},
+        "resources": {},
+        "devices": {},
     }
 
 
@@ -320,7 +395,8 @@ def test_gui_rejects_invalid_saved_environment_without_overwriting(
     from gear_framework.desktop import QFileDialog
 
     monkeypatch.setattr(
-        QFileDialog, "getOpenFileName",
+        QFileDialog,
+        "getOpenFileName",
         lambda *args: pytest.fail("Saved environment must be loaded directly"),
     )
     environment = tmp_path / "environment.yaml"
@@ -332,7 +408,7 @@ def test_gui_rejects_invalid_saved_environment_without_overwriting(
 
 
 def test_cli_run_remains_headless_and_gui_explains_optional_dependency(bench):
-    code = '''
+    code = """
 import importlib.abc
 import sys
 class NoQt(importlib.abc.MetaPathFinder):
@@ -342,21 +418,34 @@ class NoQt(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, NoQt())
 from gear_framework.cli import main
 sys.exit(main(sys.argv[1:]))
-'''
+"""
     env = dict(os.environ, PYTHONPATH=os.pathsep.join(["src", "doc/contracts"]))
     paths = [
-        "--app-dir", str(bench["app"]), "--environment", str(bench["environment"]),
-        "--case", str(bench["case"]), "--project", str(bench["project"]),
+        "--app-dir",
+        str(bench["app"]),
+        "--environment",
+        str(bench["environment"]),
+        "--case",
+        str(bench["case"]),
+        "--project",
+        str(bench["project"]),
     ]
     run = subprocess.run(
-        [sys.executable, "-c", code, "run", *paths], input="yes\n",
-        capture_output=True, text=True, env=env, timeout=10,
+        [sys.executable, "-c", code, "run", *paths],
+        input="yes\n",
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=10,
     )
     assert run.returncode == 0, run.stderr
     assert '"outcome": "PASS"' in run.stdout
     gui = subprocess.run(
         [sys.executable, "-c", code, "gui", "--app-dir", str(bench["app"])],
-        capture_output=True, text=True, env=env, timeout=10,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=10,
     )
     assert gui.returncode == 3
     assert "gear-framework[gui]" in gui.stderr

@@ -1,15 +1,17 @@
 """Session-owned USB ADB clients; mutations run on the host's single worker.
 
-Only logcat_snapshot may be called from the GUI thread. It reads cached state
-under a lock and never polls a process or touches the filesystem.
+Snapshot methods may be called from the GUI thread. They read cached state
+under a lock and never poll a process or touch the filesystem.
 """
 
 from __future__ import annotations
 
 import ast
 from collections import deque
+from copy import deepcopy
 from dataclasses import dataclass, field
 import os
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -106,6 +108,42 @@ def _parse_devices(payload: bytes) -> list[dict[str, str]]:
     return devices
 
 
+def _fastboot_home() -> Path:
+    """Match AOSP fastboot's profile resolution, including Windows shell API."""
+    if os.name == "nt":
+        import ctypes
+
+        path = ctypes.create_unicode_buffer(260)
+        if (
+            ctypes.windll.shell32.SHGetFolderPathW(None, 0x28, None, 0, path) != 0
+            or not path.value
+        ):
+            raise OSError("Cannot resolve fastboot user profile")
+        return Path(path.value)
+    return Path.home()
+
+
+def _check_fastboot_usb_listing():
+    # Modern fastboot `devices` also probes addresses stored by `connect`.
+    # Refuse that external configuration instead of mutating it or contacting it.
+    try:
+        registry = _fastboot_home() / ".fastboot" / "devices"
+        try:
+            entries = registry.read_bytes().strip()
+        except FileNotFoundError:
+            return
+    except (OSError, RuntimeError) as exc:
+        raise GearError(
+            "FASTBOOT_NETWORK_CHECK_FAILED",
+            f"无法确认 fastboot 网络登记为空，未启动查询：{exc}",
+        ) from exc
+    if entries:
+        raise GearError(
+            "FASTBOOT_NETWORK_CONFIGURED",
+            "fastboot 存在已登记网络目标；USB-only 模式未启动发现，请先在外部清理该登记。",
+        )
+
+
 def _process_options() -> dict:
     return {
         "stdin": subprocess.DEVNULL,
@@ -139,6 +177,24 @@ class _LogCapture:
 class AdbService:
     def __init__(self):
         self._adb_path = "adb"
+        self._fastboot_path = ""
+        self._query_lock = threading.RLock()
+        self._monitor_stop = threading.Event()
+        self._monitor = None
+        self._records = {"adb": [], "fastboot": []}
+        self._queries = {
+            "adb": {"status": "unknown", "diagnostic": None},
+            "fastboot": {
+                "status": "unavailable",
+                "diagnostic": {
+                    "code": "FASTBOOT_UNCONFIGURED",
+                    "message": "未配置 fastboot，查询不可用。",
+                    "details": {},
+                },
+            },
+        }
+        self._outputs = {}
+        self._revision = 0
         self._closed = False
         self._logs: dict[str, _LogCapture] = {}
         self._lock = threading.Lock()
@@ -146,9 +202,260 @@ class AdbService:
     def configure(self, adb_path: str) -> None:
         self._ensure_open()
         if adb_path != self._adb_path:
+            self.stop_monitor()
+            self._invalidate("adb")
             for serial in list(self._logs):
                 self.stop_logcat(serial)
             self._adb_path = adb_path
+
+    def configure_fastboot(self, path: str) -> None:
+        self._ensure_open()
+        if path != self._fastboot_path:
+            self.stop_monitor()
+            self._fastboot_path = path
+            self._invalidate("fastboot")
+
+    def _invalidate(self, tool):
+        with self._lock:
+            self._records[tool] = []
+            self._queries[tool] = {"status": "unknown", "diagnostic": None}
+            if tool == "fastboot" and not self._fastboot_path:
+                self._queries[tool] = {
+                    "status": "unavailable",
+                    "diagnostic": {
+                        "code": "FASTBOOT_UNCONFIGURED",
+                        "message": "未配置 fastboot，查询不可用。",
+                        "details": {},
+                    },
+                }
+            self._revision += 1
+
+    def _discover(self, tool, action, retire_other=True):
+        with self._query_lock:
+            try:
+                records = action()
+            except GearError as exc:
+                with self._lock:
+                    self._queries[tool] = {
+                        "status": "error",
+                        "diagnostic": {
+                            "code": exc.args[0],
+                            "message": str(exc),
+                            "details": {},
+                        },
+                    }
+                    self._revision += 1
+                raise
+            with self._lock:
+                self._records[tool] = deepcopy(records)
+                if retire_other:
+                    # A command's fresh target observation supersedes a previous
+                    # mode of that same board without inventing a new identity.
+                    serials = {record["serial"] for record in records}
+                    other = "fastboot" if tool == "adb" else "adb"
+                    self._records[other] = [
+                        record
+                        for record in self._records[other]
+                        if record["serial"] not in serials
+                    ]
+                self._queries[tool] = {"status": "ok", "diagnostic": None}
+                self._revision += 1
+            return records
+
+    def discover(self):
+        return self._discover("adb", self._discover_adb)
+
+    def discover_fastboot(self):
+        return self._discover("fastboot", self._discover_fastboot)
+
+    def refresh_devices(self):
+        with self._query_lock:
+            for tool, query in (
+                ("adb", self._discover_adb),
+                ("fastboot", self._discover_fastboot),
+            ):
+                try:
+                    self._discover(tool, query, retire_other=False)
+                except GearError:
+                    pass  # Each failed query is retained, independently, in the cache.
+            return self.device_snapshot()["records"]
+
+    def device_snapshot(self):
+        with self._lock:
+            return deepcopy(
+                {
+                    "records": self._records["adb"] + self._records["fastboot"],
+                    "by_tool": self._records,
+                    "queries": self._queries,
+                    "outputs": self._outputs,
+                    "revision": self._revision,
+                    "monitoring": self._monitor is not None
+                    and not self._monitor_stop.is_set(),
+                }
+            )
+
+    def device_status(self, serial):
+        snapshot = self.device_snapshot()
+        matches = [
+            record
+            for tool, records in snapshot["by_tool"].items()
+            if snapshot["queries"][tool]["status"] == "ok"
+            for record in records
+            if record["serial"] == serial
+        ]
+        errors = [
+            query["diagnostic"]
+            for query in snapshot["queries"].values()
+            if query["diagnostic"]
+        ]
+        if len(matches) > 1:
+            return {
+                "state": "ambiguous",
+                "diagnostic": {
+                    "code": "ADB_AMBIGUOUS_DEVICE",
+                    "message": "多个接口使用同一单板编码；请重新刷新核对。",
+                    "details": {},
+                },
+            }
+        if matches:
+            return {"state": matches[0]["state"], "diagnostic": None}
+        if errors:
+            return {"state": "unknown", "diagnostic": errors[0]}
+        complete = all(
+            query["status"] == "ok" for query in snapshot["queries"].values()
+        )
+        return {"state": "missing" if complete else "unknown", "diagnostic": None}
+
+    def _remember_output(self, serial, kind, result):
+        with self._lock:
+            self._outputs[serial] = {"kind": kind, **result}
+            self._revision += 1
+        return result
+
+    def start_monitor(self, interval_s=1.0):
+        self._ensure_open()
+        if self._monitor is not None:
+            return
+        if not 0 < interval_s <= 60:
+            raise GearError("ADB_ARGUMENTS_INVALID", "观察间隔必须为 0–60 秒。")
+        self._monitor_stop.clear()
+
+        def observe():
+            while not self._monitor_stop.is_set():
+                self.refresh_devices()
+                if self._monitor_stop.wait(interval_s):
+                    break
+
+        self._monitor = threading.Thread(target=observe, name="gear-board-observer")
+        self._monitor.start()
+
+    def stop_monitor(self):
+        self._monitor_stop.set()
+        if self._monitor is not None:
+            self._monitor.join()
+            self._monitor = None
+
+    def _run_fastboot(self, arguments, timeout):
+        self._ensure_open()
+        if not self._fastboot_path:
+            raise GearError("FASTBOOT_UNCONFIGURED", "未配置 fastboot，查询不可用。")
+        try:
+            process = subprocess.Popen(
+                [self._fastboot_path, *arguments],
+                **_process_options(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+        except OSError as exc:
+            raise GearError(
+                "FASTBOOT_TOOL_ERROR", f"Could not start fastboot: {exc}"
+            ) from exc
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            process.kill()
+            process.communicate(timeout=2)
+            raise GearError(
+                "FASTBOOT_TIMEOUT", f"fastboot 超过 {timeout} 秒，客户端已停止。"
+            ) from exc
+        return {"exit_code": process.returncode, "stdout": stdout, "stderr": stderr}
+
+    def _discover_fastboot(self):
+        if self._fastboot_path:
+            _check_fastboot_usb_listing()
+        result = self._run_fastboot(["devices", "-l"], _DISCOVERY_TIMEOUT)
+        if result["exit_code"]:
+            raise GearError(
+                "FASTBOOT_DISCOVERY_FAILED",
+                result["stderr"] or "fastboot devices 查询失败。",
+            )
+        records = []
+        for line in result["stdout"].splitlines():
+            fields = line.split()
+            if not fields:
+                continue
+            if fields[0].lower().startswith(("tcp:", "udp:")):
+                continue
+            if len(fields) < 2 or fields[1] != "fastboot" or fields[0].startswith("?"):
+                raise GearError(
+                    "FASTBOOT_DISCOVERY_FAILED",
+                    "无法解析 fastboot USB 设备记录：" + line,
+                )
+            self._fastboot_serial(fields[0])
+            records.append(
+                {
+                    "serial": fields[0],
+                    "state": "fastboot",
+                    "usb": " ".join(fields[2:]),
+                    "model": "",
+                }
+            )
+        return records
+
+    @staticmethod
+    def _fastboot_serial(serial):
+        # Fastboot interprets tcp:/udp: as network connections; do not permit
+        # network addresses, USB device-path aliases, or selection placeholders.
+        if (
+            type(serial) is not str
+            or not serial
+            or serial.startswith(("-", "?"))
+            or any(c.isspace() or c in ":\0" for c in serial)
+        ):
+            raise GearError(
+                "FASTBOOT_TARGET_INVALID", "fastboot 只接受 USB 单板序列号。"
+            )
+
+    def fastboot(self, serial, arguments, timeout_s=30):
+        self._fastboot_serial(serial)
+        if (
+            type(arguments) is not list
+            or not arguments
+            or any(
+                type(arg) is not str or not arg or "\0" in arg or arg.startswith("-")
+                for arg in arguments
+            )
+            or arguments[0] in {"devices", "connect", "disconnect", "help"}
+            or type(timeout_s) not in (int, float)
+            or not math.isfinite(timeout_s)
+            or not 0 < timeout_s <= 300
+        ):
+            raise GearError(
+                "FASTBOOT_ARGUMENTS_INVALID",
+                "请输入子命令及参数；不接受全局选项或网络命令，timeout_s 必须大于 0 且不超过 300。",
+            )
+        with self._query_lock:
+            matches = [r for r in self.discover_fastboot() if r["serial"] == serial]
+            if len(matches) != 1:
+                code = (
+                    "ADB_AMBIGUOUS_DEVICE" if matches else "FASTBOOT_DEVICE_UNAVAILABLE"
+                )
+                raise GearError(code, f"无法唯一定位 fastboot USB 单板 {serial}。")
+            result = self._run_fastboot(["-s", serial, "--", *arguments], timeout_s)
+            return self._remember_output(serial, "FASTBOOT", result)
 
     def _ensure_open(self) -> None:
         if self._closed:
@@ -163,7 +470,7 @@ class AdbService:
         except OSError as exc:
             raise GearError("ADB_TOOL_ERROR", f"Could not start ADB: {exc}") from exc
 
-    def discover(self) -> list[dict[str, str]]:
+    def _discover_adb(self) -> list[dict[str, str]]:
         # Take one 4-hex-length framed snapshot and close this listing client.
         # No subscription, device reconnection, or global server control remains.
         process = self._start(
@@ -236,13 +543,23 @@ class AdbService:
         return {"exit_code": process.returncode, "stdout": stdout, "stderr": stderr}
 
     def shell(self, serial: str, command: str) -> dict:
-        return self._run([*self._target(serial), "shell", "-n", "-T", command])
+        with self._query_lock:
+            result = self._run([*self._target(serial), "shell", "-n", "-T", command])
+            return self._remember_output(serial, "SHELL", result)
 
     def pull(self, serial: str, remote_path: str, destination: str) -> dict:
-        return self._run([*self._target(serial), "pull", remote_path, destination])
+        with self._query_lock:
+            result = self._run(
+                [*self._target(serial), "pull", remote_path, destination]
+            )
+            return self._remember_output(serial, "PULL", result)
 
     def dump_logcat(self, serial: str) -> dict:
-        return self._run([*self._target(serial), "logcat", "-d", "-v", "threadtime"])
+        with self._query_lock:
+            result = self._run(
+                [*self._target(serial), "logcat", "-d", "-v", "threadtime"]
+            )
+            return self._remember_output(serial, "LOGCAT", result)
 
     def start_logcat(self, serial: str, destination: str) -> dict:
         self._ensure_open()
@@ -334,6 +651,7 @@ class AdbService:
     def close(self) -> None:
         if self._closed:
             return
+        self.stop_monitor()
         for serial in list(self._logs):
             self.stop_logcat(serial)
         self._closed = True

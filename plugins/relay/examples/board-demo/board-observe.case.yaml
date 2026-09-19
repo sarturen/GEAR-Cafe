@@ -1,0 +1,23 @@
+api: gear.dsl/v1
+name: board-observe-demo
+description: 先在GUI连接MCU/SOC并打开相机预览。本用例观察端口、画面采集状态并执行一条ADB示例命令。
+body:
+  - assert:
+      all:
+        - resource: ADB.main
+          condition: STATE_IS
+          args: {state: device}
+        - {resource: CONSOLE.mcu, condition: CONNECTED}
+        - {resource: CONSOLE.soc, condition: CONNECTED}
+        - {resource: SCREEN.center, condition: STREAMING}
+      within: 3s
+      every: 200ms
+  - do:
+      resource: ADB.main
+      operation: SHELL
+      args: {command: "echo GEAR_DEMO"}
+evidence_on_fail:
+  - {resource: ADB.main, evidence: DIAGNOSTIC_LOGS}
+  - {resource: CONSOLE.mcu, evidence: TRANSCRIPT}
+  - {resource: CONSOLE.soc, evidence: TRANSCRIPT}
+  - {resource: SCREEN.center, evidence: SNAPSHOT}

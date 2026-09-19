@@ -1,0 +1,13 @@
+api: gear.plugin/v1
+id: gear.camera
+version: 1.0.0
+entrypoints:
+  runtime: gear_camera.runtime:create_plugin
+  workspace: gear_camera.workspace:create_workspace
+resource_types:
+  SCREEN:
+    operations: {}
+    conditions:
+      STREAMING: {}
+    evidence:
+      SNAPSHOT: {}
